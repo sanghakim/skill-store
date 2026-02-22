@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillForge - AI Skill Store & Editor</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Navigation -->
+    <nav class="nav" id="mainNav">
+      <div class="nav-inner">
+        <div class="nav-brand" onclick="navigate('store')">
+          <div class="brand-icon">
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
+              <path d="M14 2L3 8v12l11 6 11-6V8L14 2z" stroke="currentColor" stroke-width="2" fill="none"/>
+              <path d="M14 8l-5 3v6l5 3 5-3v-6l-5-3z" fill="currentColor" opacity="0.3"/>
+              <circle cx="14" cy="14" r="3" fill="currentColor"/>
+            </svg>
+          </div>
+          <span class="brand-text">SkillForge</span>
+        </div>
+        <div class="nav-links">
+          <button class="nav-link active" data-page="store" onclick="navigate('store')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/><polyline points="9,22 9,12 15,12 15,22"/></svg>
+            Store
+          </button>
+          <button class="nav-link" data-page="editor" onclick="navigate('editor')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Editor
+          </button>
+          <button class="nav-link" data-page="myskills" onclick="navigate('myskills')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            My Skills
+          </button>
+          <button class="nav-link" data-page="docs" onclick="navigate('docs')">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+            Docs
+          </button>
+        </div>
+        <div class="nav-actions">
+          <div class="search-box">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+            <input type="text" placeholder="Search skills..." id="globalSearch" oninput="handleSearch(this.value)">
+          </div>
+          <button class="btn-primary btn-sm" onclick="navigate('editor')">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            New Skill
+          </button>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Store Page -->
+    <main class="page active" id="page-store">
+      <!-- Hero -->
+      <section class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+          <div class="hero-badge">Multi-Agent Skill Platform</div>
+          <h1>AI Skills,<br><span class="gradient-text">Build & Share</span></h1>
+          <p class="hero-desc">에이전트가 사용하는 스킬을 만들고, 검증하고, 공유하세요.<br>코딩 없이 누구나 AI의 능력을 확장할 수 있습니다.</p>
+          <div class="hero-stats">
+            <div class="stat"><span class="stat-num" id="totalSkills">127</span><span class="stat-label">Skills</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><span class="stat-num" id="totalAuthors">48</span><span class="stat-label">Creators</span></div>
+            <div class="stat-divider"></div>
+            <div class="stat"><span class="stat-num" id="totalDownloads">3.2K</span><span class="stat-label">Installs</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Category Filter -->
+      <section class="section">
+        <div class="category-bar">
+          <button class="cat-chip active" onclick="filterCategory('all', this)">All</button>
+          <button class="cat-chip" onclick="filterCategory('document', this)">Document</button>
+          <button class="cat-chip" onclick="filterCategory('email', this)">Email</button>
+          <button class="cat-chip" onclick="filterCategory('data', this)">Data</button>
+          <button class="cat-chip" onclick="filterCategory('schedule', this)">Schedule</button>
+          <button class="cat-chip" onclick="filterCategory('presentation', this)">Presentation</button>
+          <button class="cat-chip" onclick="filterCategory('hr', this)">HR</button>
+          <button class="cat-chip" onclick="filterCategory('translation', this)">Translation</button>
+          <button class="cat-chip" onclick="filterCategory('automation', this)">Automation</button>
+        </div>
+      </section>
+
+      <!-- Featured -->
+      <section class="section">
+        <div class="section-header">
+          <h2>Featured Skills</h2>
+          <span class="badge-new">Popular</span>
+        </div>
+        <div class="skill-grid" id="featuredGrid"></div>
+      </section>
+
+      <!-- All Skills -->
+      <section class="section">
+        <div class="section-header">
+          <h2>All Skills</h2>
+          <div class="sort-controls">
+            <select id="sortSelect" onchange="sortSkills(this.value)">
+              <option value="popular">Most Popular</option>
+              <option value="recent">Most Recent</option>
+              <option value="rating">Highest Rated</option>
+              <option value="name">Name A-Z</option>
+            </select>
+          </div>
+        </div>
+        <div class="skill-grid" id="allSkillsGrid"></div>
+      </section>
+    </main>
+
+    <!-- Editor Page -->
+    <main class="page" id="page-editor">
+      <div class="editor-layout">
+        <!-- Editor Left Panel -->
+        <div class="editor-panel">
+          <div class="editor-toolbar">
+            <h2>Skill Editor</h2>
+            <div class="toolbar-actions">
+              <button class="btn-ghost btn-sm" onclick="loadTemplate()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/></svg>
+                Template
+              </button>
+              <button class="btn-ghost btn-sm" onclick="importSkill()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7,10 12,15 17,10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Import
+              </button>
+            </div>
+          </div>
+
+          <!-- Tabs -->
+          <div class="editor-tabs">
+            <button class="editor-tab active" onclick="switchEditorTab('meta', this)">Metadata</button>
+            <button class="editor-tab" onclick="switchEditorTab('prompt', this)">Prompt</button>
+            <button class="editor-tab" onclick="switchEditorTab('io', this)">I/O Schema</button>
+            <button class="editor-tab" onclick="switchEditorTab('settings', this)">Settings</button>
+          </div>
+
+          <!-- Metadata Tab -->
+          <div class="editor-tab-content active" id="tab-meta">
+            <div class="form-group">
+              <label>Skill Name <span class="required">*</span></label>
+              <input type="text" id="skillName" placeholder="e.g., email-composer" oninput="updatePreview()">
+              <span class="form-hint">영문 소문자, 하이픈만 사용 (예: my-skill-name)</span>
+            </div>
+            <div class="form-group">
+              <label>Display Name <span class="required">*</span></label>
+              <input type="text" id="skillDisplayName" placeholder="e.g., 비즈니스 이메일 작성기" oninput="updatePreview()">
+            </div>
+            <div class="form-group">
+              <label>Category <span class="required">*</span></label>
+              <select id="skillCategory" onchange="updatePreview()">
+                <option value="">-- Select --</option>
+                <option value="document">Document</option>
+                <option value="email">Email</option>
+                <option value="data">Data Analysis</option>
+                <option value="schedule">Schedule</option>
+                <option value="presentation">Presentation</option>
+                <option value="hr">HR</option>
+                <option value="translation">Translation</option>
+                <option value="automation">Automation</option>
+                <option value="knowledge">Knowledge</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Description <span class="required">*</span></label>
+              <textarea id="skillDescription" rows="3" placeholder="이 스킬이 어떤 문제를 해결하나요?" oninput="updatePreview()"></textarea>
+            </div>
+            <div class="form-group">
+              <label>Version</label>
+              <input type="text" id="skillVersion" value="1.0.0" placeholder="1.0.0">
+            </div>
+            <div class="form-group">
+              <label>Tags</label>
+              <input type="text" id="skillTags" placeholder="comma separated: email, business, korean">
+              <span class="form-hint">쉼표로 구분하여 입력</span>
+            </div>
+            <div class="form-group">
+              <label>Icon</label>
+              <div class="icon-picker" id="iconPicker">
+                <button class="icon-option selected" onclick="selectIcon('doc', this)" data-icon="doc">&#128196;</button>
+                <button class="icon-option" onclick="selectIcon('email', this)" data-icon="email">&#9993;</button>
+                <button class="icon-option" onclick="selectIcon('chart', this)" data-icon="chart">&#128200;</button>
+                <button class="icon-option" onclick="selectIcon('calendar', this)" data-icon="calendar">&#128197;</button>
+                <button class="icon-option" onclick="selectIcon('slide', this)" data-icon="slide">&#127916;</button>
+                <button class="icon-option" onclick="selectIcon('person', this)" data-icon="person">&#128100;</button>
+                <button class="icon-option" onclick="selectIcon('globe', this)" data-icon="globe">&#127760;</button>
+                <button class="icon-option" onclick="selectIcon('gear', this)" data-icon="gear">&#9881;</button>
+                <button class="icon-option" onclick="selectIcon('brain', this)" data-icon="brain">&#129504;</button>
+                <button class="icon-option" onclick="selectIcon('rocket', this)" data-icon="rocket">&#128640;</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Prompt Tab -->
+          <div class="editor-tab-content" id="tab-prompt">
+            <div class="form-group">
+              <label>System Prompt <span class="required">*</span></label>
+              <div class="prompt-help">
+                <span>변수는 <code>{{variable_name}}</code> 형식으로 사용합니다.</span>
+              </div>
+              <textarea id="skillPrompt" rows="16" class="code-textarea" placeholder="당신은 {{role}} 전문가입니다.
+
+사용자의 요청: {{user_input}}
+톤: {{tone}}
+
+위 내용을 바탕으로 전문적인 결과물을 생성해주세요." oninput="updatePreview(); highlightVariables()"></textarea>
+              <div class="prompt-vars" id="detectedVars"></div>
+            </div>
+            <div class="form-group">
+              <label>Example Input</label>
+              <textarea id="skillExampleInput" rows="4" placeholder='{"context": "거래처에 납기 지연 사과", "tone": "formal"}'></textarea>
+            </div>
+            <div class="form-group">
+              <label>Example Output</label>
+              <textarea id="skillExampleOutput" rows="4" placeholder="[Expected output from the skill...]"></textarea>
+            </div>
+          </div>
+
+          <!-- I/O Schema Tab -->
+          <div class="editor-tab-content" id="tab-io">
+            <div class="schema-section">
+              <div class="schema-header">
+                <h3>Inputs</h3>
+                <button class="btn-ghost btn-xs" onclick="addIOField('input')">+ Add Input</button>
+              </div>
+              <div id="inputFields">
+                <div class="io-field" data-index="0">
+                  <div class="io-field-row">
+                    <input type="text" placeholder="name" class="io-name" value="context">
+                    <select class="io-type">
+                      <option value="string" selected>string</option>
+                      <option value="number">number</option>
+                      <option value="boolean">boolean</option>
+                      <option value="enum">enum</option>
+                      <option value="array">array</option>
+                      <option value="object">object</option>
+                    </select>
+                    <label class="io-required-label">
+                      <input type="checkbox" checked> Required
+                    </label>
+                    <button class="btn-icon-danger" onclick="removeIOField(this)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <input type="text" placeholder="Description" class="io-desc" value="작업 상황 설명">
+                </div>
+              </div>
+            </div>
+
+            <div class="schema-section">
+              <div class="schema-header">
+                <h3>Outputs</h3>
+                <button class="btn-ghost btn-xs" onclick="addIOField('output')">+ Add Output</button>
+              </div>
+              <div id="outputFields">
+                <div class="io-field" data-index="0">
+                  <div class="io-field-row">
+                    <input type="text" placeholder="name" class="io-name" value="result">
+                    <select class="io-type">
+                      <option value="string" selected>string</option>
+                      <option value="number">number</option>
+                      <option value="boolean">boolean</option>
+                      <option value="array">array</option>
+                      <option value="object">object</option>
+                    </select>
+                    <label class="io-required-label">
+                      <input type="checkbox" checked> Required
+                    </label>
+                    <button class="btn-icon-danger" onclick="removeIOField(this)">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                    </button>
+                  </div>
+                  <input type="text" placeholder="Description" class="io-desc" value="생성된 결과물">
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Settings Tab -->
+          <div class="editor-tab-content" id="tab-settings">
+            <div class="form-group">
+              <label>Max Tokens</label>
+              <input type="number" id="skillMaxTokens" value="2000" min="100" max="16000">
+            </div>
+            <div class="form-group">
+              <label>Temperature</label>
+              <div class="range-with-value">
+                <input type="range" id="skillTemp" min="0" max="1" step="0.1" value="0.7" oninput="document.getElementById('tempValue').textContent=this.value">
+                <span id="tempValue">0.7</span>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Target Agent</label>
+              <div class="checkbox-group">
+                <label><input type="checkbox" value="planner"> Planner Agent</label>
+                <label><input type="checkbox" value="executor" checked> Executor Agent</label>
+                <label><input type="checkbox" value="reviewer"> Reviewer Agent</label>
+                <label><input type="checkbox" value="research"> Research Agent</label>
+                <label><input type="checkbox" value="creative" checked> Creative Agent</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Required Permissions</label>
+              <div class="checkbox-group">
+                <label><input type="checkbox" value="read:context" checked> Read User Context</label>
+                <label><input type="checkbox" value="write:clipboard"> Write to Clipboard</label>
+                <label><input type="checkbox" value="read:files"> Read Files</label>
+                <label><input type="checkbox" value="write:files"> Write Files</label>
+                <label><input type="checkbox" value="network:api"> External API Access</label>
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Requires Human Review</label>
+              <label class="toggle">
+                <input type="checkbox" id="skillReview" checked>
+                <span class="toggle-slider"></span>
+                <span class="toggle-label">결과물을 사용자에게 확인받은 후 전달</span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Editor Right Panel - Preview & Validation -->
+        <div class="preview-panel">
+          <!-- Preview Card -->
+          <div class="preview-section">
+            <h3>Preview</h3>
+            <div class="preview-card" id="previewCard">
+              <div class="skill-card preview-mode">
+                <div class="skill-card-header">
+                  <span class="skill-icon" id="previewIcon">&#128196;</span>
+                  <div>
+                    <h4 id="previewName">Skill Name</h4>
+                    <span class="skill-category" id="previewCategory">category</span>
+                  </div>
+                </div>
+                <p class="skill-desc" id="previewDesc">Add a description to see it here...</p>
+                <div class="skill-meta">
+                  <span class="skill-version" id="previewVersion">v1.0.0</span>
+                  <span class="skill-author">by You</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Validation -->
+          <div class="preview-section">
+            <div class="validation-header">
+              <h3>Validation</h3>
+              <button class="btn-primary btn-sm" onclick="validateSkill()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 12l2 2 4-4"/><circle cx="12" cy="12" r="10"/></svg>
+                Validate
+              </button>
+            </div>
+            <div id="validationResults" class="validation-results">
+              <div class="validation-empty">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="var(--text-tertiary)" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                <p>Click "Validate" to check your skill</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- YAML Export -->
+          <div class="preview-section">
+            <div class="validation-header">
+              <h3>Generated YAML</h3>
+              <button class="btn-ghost btn-sm" onclick="copyYAML()">
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
+                Copy
+              </button>
+            </div>
+            <pre class="yaml-output" id="yamlOutput"><code>## Fill in the form to generate YAML</code></pre>
+          </div>
+
+          <!-- Actions -->
+          <div class="editor-actions">
+            <button class="btn-ghost" onclick="saveDraft()">Save Draft</button>
+            <button class="btn-secondary" onclick="testSkill()">Test Run</button>
+            <button class="btn-primary" onclick="publishSkill()">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16,6 12,2 8,6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+              Publish to Store
+            </button>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- My Skills Page -->
+    <main class="page" id="page-myskills">
+      <section class="section">
+        <div class="section-header">
+          <h2>My Skills</h2>
+          <button class="btn-primary btn-sm" onclick="navigate('editor')">+ Create New</button>
+        </div>
+
+        <div class="myskills-tabs">
+          <button class="myskill-tab active" onclick="switchMySkillsTab('published', this)">Published</button>
+          <button class="myskill-tab" onclick="switchMySkillsTab('drafts', this)">Drafts</button>
+          <button class="myskill-tab" onclick="switchMySkillsTab('installed', this)">Installed</button>
+        </div>
+
+        <div class="myskills-content" id="myskillsContent">
+          <!-- Dynamic content -->
+        </div>
+      </section>
+
+      <!-- Analytics -->
+      <section class="section">
+        <h2>Analytics</h2>
+        <div class="analytics-grid">
+          <div class="analytics-card">
+            <div class="analytics-value">3</div>
+            <div class="analytics-label">Published Skills</div>
+            <div class="analytics-trend up">+1 this month</div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-value">284</div>
+            <div class="analytics-label">Total Installs</div>
+            <div class="analytics-trend up">+47 this week</div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-value">4.6</div>
+            <div class="analytics-label">Avg. Rating</div>
+            <div class="analytics-trend neutral">No change</div>
+          </div>
+          <div class="analytics-card">
+            <div class="analytics-value">1,203</div>
+            <div class="analytics-label">Total Executions</div>
+            <div class="analytics-trend up">+189 this week</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Docs Page -->
+    <main class="page" id="page-docs">
+      <div class="docs-layout">
+        <aside class="docs-sidebar">
+          <h3>Documentation</h3>
+          <ul class="docs-nav">
+            <li class="active" onclick="showDoc('overview', this)">Overview</li>
+            <li onclick="showDoc('getting-started', this)">Getting Started</li>
+            <li onclick="showDoc('skill-schema', this)">Skill Schema</li>
+            <li onclick="showDoc('prompt-guide', this)">Prompt Guide</li>
+            <li onclick="showDoc('agents', this)">Agent Types</li>
+            <li onclick="showDoc('memory', this)">Memory System</li>
+            <li onclick="showDoc('publishing', this)">Publishing</li>
+            <li onclick="showDoc('api', this)">API Reference</li>
+          </ul>
+        </aside>
+        <div class="docs-content" id="docsContent">
+          <!-- Dynamic docs -->
+        </div>
+      </div>
+    </main>
+
+    <!-- Skill Detail Modal -->
+    <div class="modal-overlay" id="skillModal" onclick="closeModal(event)">
+      <div class="modal" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeModal()">&times;</button>
+        <div id="modalContent"></div>
+      </div>
+    </div>
+
+    <!-- Test Modal -->
+    <div class="modal-overlay" id="testModal" onclick="closeTestModal(event)">
+      <div class="modal modal-lg" onclick="event.stopPropagation()">
+        <button class="modal-close" onclick="closeTestModal()">&times;</button>
+        <div id="testModalContent">
+          <h2>Test Skill</h2>
+          <div class="test-layout">
+            <div class="test-input-section">
+              <h3>Input</h3>
+              <textarea id="testInput" rows="8" class="code-textarea" placeholder="Enter test input as JSON..."></textarea>
+              <button class="btn-primary" onclick="runTest()" id="runTestBtn">Run Test</button>
+            </div>
+            <div class="test-output-section">
+              <h3>Output</h3>
+              <div id="testOutput" class="test-output-area">
+                <p class="text-muted">Run a test to see output here...</p>
+              </div>
+              <div id="testMetrics" class="test-metrics" style="display:none">
+                <span class="metric"><strong>Tokens:</strong> <span id="metricTokens">-</span></span>
+                <span class="metric"><strong>Time:</strong> <span id="metricTime">-</span></span>
+                <span class="metric"><strong>Status:</strong> <span id="metricStatus">-</span></span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast-container" id="toastContainer"></div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

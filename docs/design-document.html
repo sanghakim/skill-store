@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillForge - Technical Design Document</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #ffffff;
+      --bg-alt: #f8f9fc;
+      --bg-code: #1e1e2e;
+      --text: #1a1a2e;
+      --text-secondary: #5a5a7a;
+      --text-tertiary: #8a8aa8;
+      --accent: #4f46e5;
+      --accent-light: #eef2ff;
+      --border: #e5e7eb;
+      --border-dark: #d1d5db;
+      --success: #059669;
+      --warning: #d97706;
+      --error: #dc2626;
+      --font: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font);
+      color: var(--text);
+      background: var(--bg);
+      line-height: 1.7;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Print Styles */
+    @media print {
+      body { font-size: 11pt; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      .doc-sidebar { display: none; }
+      .doc-main { margin-left: 0 !important; max-width: 100% !important; }
+      pre { white-space: pre-wrap; font-size: 9pt; }
+    }
+
+    /* Layout */
+    .doc-layout {
+      display: flex;
+      min-height: 100vh;
+    }
+
+    .doc-sidebar {
+      width: 280px;
+      background: var(--bg-alt);
+      border-right: 1px solid var(--border);
+      padding: 32px 20px;
+      position: fixed;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      overflow-y: auto;
+      z-index: 10;
+    }
+
+    .doc-sidebar h1 {
+      font-size: 16px;
+      font-weight: 800;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .doc-sidebar .doc-subtitle {
+      font-size: 11px;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .toc-section {
+      margin-bottom: 20px;
+    }
+
+    .toc-section-title {
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-tertiary);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      margin-bottom: 8px;
+    }
+
+    .toc-link {
+      display: block;
+      padding: 5px 12px;
+      font-size: 13px;
+      color: var(--text-secondary);
+      text-decoration: none;
+      border-radius: 6px;
+      transition: all 150ms ease;
+      border-left: 2px solid transparent;
+    }
+
+    .toc-link:hover {
+      color: var(--accent);
+      background: var(--accent-light);
+    }
+
+    .toc-link.active {
+      color: var(--accent);
+      background: var(--accent-light);
+      border-left-color: var(--accent);
+      font-weight: 600;
+    }
+
+    .doc-main {
+      margin-left: 280px;
+      max-width: 860px;
+      padding: 48px 56px;
+    }
+
+    /* Cover */
+    .doc-cover {
+      text-align: center;
+      padding: 80px 0 60px;
+      border-bottom: 2px solid var(--border);
+      margin-bottom: 48px;
+    }
+
+    .doc-cover .cover-badge {
+      display: inline-block;
+      padding: 4px 14px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      margin-bottom: 20px;
+    }
+
+    .doc-cover h1 {
+      font-size: 36px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    .doc-cover .cover-sub {
+      font-size: 18px;
+      color: var(--text-secondary);
+      font-weight: 400;
+      margin-bottom: 32px;
+    }
+
+    .doc-meta-table {
+      display: inline-grid;
+      grid-template-columns: auto auto;
+      gap: 4px 24px;
+      text-align: left;
+      font-size: 13px;
+      background: var(--bg-alt);
+      padding: 20px 32px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+    }
+
+    .doc-meta-table dt {
+      color: var(--text-tertiary);
+      font-weight: 500;
+    }
+
+    .doc-meta-table dd {
+      color: var(--text);
+      font-weight: 600;
+    }
+
+    /* Headings */
+    .doc-main h2 {
+      font-size: 26px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-top: 56px;
+      margin-bottom: 8px;
+      padding-bottom: 12px;
+      border-bottom: 2px solid var(--border);
+      color: var(--text);
+    }
+
+    .doc-main h2 .section-num {
+      color: var(--accent);
+      margin-right: 8px;
+    }
+
+    .doc-main h3 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-top: 36px;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .doc-main h4 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-top: 24px;
+      margin-bottom: 6px;
+      color: var(--text-secondary);
+    }
+
+    .doc-main p {
+      font-size: 14.5px;
+      color: var(--text-secondary);
+      margin-bottom: 14px;
+    }
+
+    .doc-main ul, .doc-main ol {
+      margin: 10px 0 16px 20px;
+    }
+
+    .doc-main li {
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 5px;
+    }
+
+    .doc-main li strong {
+      color: var(--text);
+    }
+
+    /* Code */
+    pre {
+      background: var(--bg-code);
+      color: #cdd6f4;
+      padding: 20px 24px;
+      border-radius: 10px;
+      overflow-x: auto;
+      margin: 16px 0 20px;
+      font-family: var(--mono);
+      font-size: 12.5px;
+      line-height: 1.65;
+    }
+
+    code {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--accent);
+      background: var(--accent-light);
+      padding: 1px 6px;
+      border-radius: 4px;
+    }
+
+    pre code {
+      color: #cdd6f4;
+      background: none;
+      padding: 0;
+    }
+
+    .code-comment { color: #6c7086; }
+    .code-keyword { color: #cba6f7; }
+    .code-string { color: #a6e3a1; }
+    .code-type { color: #89b4fa; }
+
+    /* Callout */
+    .callout {
+      padding: 16px 20px;
+      border-radius: 10px;
+      margin: 16px 0;
+      font-size: 14px;
+    }
+
+    .callout-info {
+      background: #eff6ff;
+      border-left: 4px solid #3b82f6;
+    }
+
+    .callout-warning {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+    }
+
+    .callout-success {
+      background: #ecfdf5;
+      border-left: 4px solid #10b981;
+    }
+
+    .callout strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text);
+    }
+
+    .callout p { margin: 0; font-size: 13.5px; }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 16px 0 20px;
+      font-size: 13.5px;
+    }
+
+    thead th {
+      background: var(--bg-alt);
+      padding: 10px 14px;
+      text-align: left;
+      font-weight: 600;
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--text-tertiary);
+      border-bottom: 2px solid var(--border);
+    }
+
+    tbody td {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      color: var(--text-secondary);
+      vertical-align: top;
+    }
+
+    tbody tr:hover { background: var(--bg-alt); }
+
+    /* Diagram boxes */
+    .arch-diagram {
+      background: var(--bg-alt);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      overflow-x: auto;
+    }
+
+    .arch-diagram pre {
+      background: none;
+      color: var(--text);
+      padding: 0;
+      margin: 0;
+      font-size: 12px;
+      line-height: 1.5;
+    }
+
+    /* Flow diagram */
+    .flow-container {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin: 16px 0;
+    }
+
+    .flow-step {
+      padding: 8px 16px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    .flow-arrow {
+      color: var(--text-tertiary);
+      font-size: 18px;
+    }
+
+    .flow-loop {
+      border: 2px dashed var(--accent);
+      border-radius: 12px;
+      padding: 8px 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Tag badges */
+    .tag {
+      display: inline-block;
+      padding: 2px 10px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .tag-blue { background: #dbeafe; color: #1d4ed8; }
+    .tag-green { background: #d1fae5; color: #065f46; }
+    .tag-purple { background: #ede9fe; color: #5b21b6; }
+    .tag-orange { background: #ffedd5; color: #9a3412; }
+    .tag-red { background: #fee2e2; color: #991b1b; }
+
+    /* Version history */
+    .version-entry {
+      display: flex;
+      gap: 16px;
+      padding: 12px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .version-tag {
+      flex-shrink: 0;
+      padding: 4px 12px;
+      background: var(--accent-light);
+      color: var(--accent);
+      border-radius: 6px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 600;
+      height: fit-content;
+    }
+
+    .version-info {
+      font-size: 13px;
+      color: var(--text-secondary);
+    }
+
+    .version-info strong { color: var(--text); }
+
+    /* Responsive */
+    @media (max-width: 900px) {
+      .doc-sidebar { display: none; }
+      .doc-main { margin-left: 0; padding: 24px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="doc-layout">
+    <!-- Sidebar TOC -->
+    <nav class="doc-sidebar no-print">
+      <h1>SkillForge</h1>
+      <div class="doc-subtitle">Technical Design Document v1.0</div>
+
+      <div class="toc-section">
+        <div class="toc-section-title">Overview</div>
+        <a href="#cover" class="toc-link active">Cover</a>
+        <a href="#s1" class="toc-link">1. Executive Summary</a>
+        <a href="#s2" class="toc-link">2. Goals & Scope</a>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title">Architecture</div>
+        <a href="#s3" class="toc-link">3. System Architecture</a>
+        <a href="#s4" class="toc-link">4. Agent Design</a>
+        <a href="#s5" class="toc-link">5. Agentic Loop</a>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title">Core Systems</div>
+        <a href="#s6" class="toc-link">6. Memory & Context</a>
+        <a href="#s7" class="toc-link">7. Skill Engine</a>
+        <a href="#s8" class="toc-link">8. Skill Schema</a>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title">Platform</div>
+        <a href="#s9" class="toc-link">9. Skill Store</a>
+        <a href="#s10" class="toc-link">10. Skills Catalog</a>
+        <a href="#s11" class="toc-link">11. Security & Safety</a>
+      </div>
+
+      <div class="toc-section">
+        <div class="toc-section-title">Delivery</div>
+        <a href="#s12" class="toc-link">12. Roadmap</a>
+        <a href="#s13" class="toc-link">13. Revision History</a>
+      </div>
+    </nav>
+
+    <!-- Document Content -->
+    <main class="doc-main">
+
+      <!-- Cover -->
+      <section class="doc-cover" id="cover">
+        <div class="cover-badge">CONFIDENTIAL - INTERNAL USE ONLY</div>
+        <h1>SkillForge<br>Multi-Agent System<br>Technical Design Document</h1>
+        <p class="cover-sub">Agentic Loop & Agent Skills 기반 멀티 에이전트 플랫폼 설계</p>
+        <dl class="doc-meta-table">
+          <dt>Document Version</dt>  <dd>1.0.0</dd>
+          <dt>Status</dt>            <dd><span class="tag tag-blue">Draft</span></dd>
+          <dt>Author</dt>            <dd>Architecture Team</dd>
+          <dt>Created</dt>           <dd>2026-02-21</dd>
+          <dt>Last Updated</dt>      <dd>2026-02-21</dd>
+          <dt>Classification</dt>    <dd>Internal / Confidential</dd>
+        </dl>
+      </section>
+
+      <!-- 1. Executive Summary -->
+      <h2 id="s1"><span class="section-num">01</span>Executive Summary</h2>
+      <p>본 문서는 SkillForge 멀티 에이전트 시스템의 기술 설계를 정의합니다. SkillForge는 단일 AI 챗봇의 한계를 넘어, 전문화된 에이전트 팀이 협업하여 복잡한 업무를 자율적으로 처리하는 차세대 AI 플랫폼입니다.</p>
+
+      <div class="callout callout-info">
+        <strong>Core Innovation</strong>
+        <p>Agentic Loop 아키텍처 + 확장 가능한 Skill 시스템 + 커뮤니티 기반 Skill Store를 결합하여, 사용자가 코딩 없이 AI 능력을 무한히 확장할 수 있는 플랫폼을 구축합니다.</p>
+      </div>
+
+      <h3>Key Design Decisions</h3>
+      <table>
+        <thead>
+          <tr><th>Decision</th><th>Choice</th><th>Rationale</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Architecture Pattern</td><td>Orchestrator + Worker Pool</td><td>유연한 스케일링, 에이전트 독립 배포</td></tr>
+          <tr><td>Agent Communication</td><td>Shared Context Bus (Pub/Sub)</td><td>비동기 병렬 처리, 느슨한 결합</td></tr>
+          <tr><td>Memory Model</td><td>3-Layer (Working/Episodic/Semantic)</td><td>단기-장기 기억 분리, 효율적 컨텍스트 관리</td></tr>
+          <tr><td>Skill Definition</td><td>YAML Schema + Prompt Template</td><td>비개발자 접근성, 버전 관리 용이</td></tr>
+          <tr><td>Skill Execution</td><td>Sandboxed Runtime</td><td>보안 격리, 장애 전파 방지</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 2. Goals & Scope -->
+      <h2 id="s2"><span class="section-num">02</span>Goals & Scope</h2>
+
+      <h3>2.1 Project Goals</h3>
+      <table>
+        <thead>
+          <tr><th>Priority</th><th>Goal</th><th>Metric</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><span class="tag tag-red">P0</span></td><td>멀티 에이전트 협업 기반 복잡 업무 자동화</td><td>단일 에이전트 대비 작업 완성도 40%+ 향상</td></tr>
+          <tr><td><span class="tag tag-red">P0</span></td><td>Agentic Loop를 통한 자율적 품질 보장</td><td>사람 검수 없이 95%+ 정확도</td></tr>
+          <tr><td><span class="tag tag-orange">P1</span></td><td>비개발자도 Skill 제작 가능</td><td>평균 스킬 제작 시간 10분 이내</td></tr>
+          <tr><td><span class="tag tag-orange">P1</span></td><td>커뮤니티 Skill Store 활성화</td><td>6개월 내 100+ 커뮤니티 스킬</td></tr>
+          <tr><td><span class="tag tag-blue">P2</span></td><td>사용자 맥락 학습 기반 개인화</td><td>반복 작업 시간 50%+ 단축</td></tr>
+        </tbody>
+      </table>
+
+      <h3>2.2 Scope</h3>
+      <table>
+        <thead>
+          <tr><th>In Scope</th><th>Out of Scope</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>멀티 에이전트 Orchestration 엔진</td><td>자체 LLM 학습/파인튜닝</td></tr>
+          <tr><td>Agentic Loop (계획-실행-검증 루프)</td><td>실시간 음성/영상 처리</td></tr>
+          <tr><td>3계층 메모리 시스템</td><td>하드웨어 인프라 구축</td></tr>
+          <tr><td>Skill 정의/실행/검증 엔진</td><td>ERP/SAP 등 레거시 시스템 직접 연동</td></tr>
+          <tr><td>Skill Store (브라우징/설치/공유)</td><td>모바일 네이티브 앱</td></tr>
+          <tr><td>Skill Editor (비주얼 편집기)</td><td>결제/유료 스킬 시스템 (Phase 2)</td></tr>
+          <tr><td>사무 업무 특화 20+ 기본 스킬</td><td></td></tr>
+        </tbody>
+      </table>
+
+      <!-- 3. System Architecture -->
+      <div class="page-break"></div>
+      <h2 id="s3"><span class="section-num">03</span>System Architecture</h2>
+
+      <h3>3.1 High-Level Architecture</h3>
+      <div class="arch-diagram">
+<pre>
+ USER INTERFACE LAYER
+ +-----------+  +-------------+  +----------+  +------------+
+ |  Chat UI  |  | Skill Store |  |  Skill   |  | Dashboard  |
+ |           |  |  (Browse /  |  |  Editor  |  | (Monitor)  |
+ |           |  |   Install)  |  | (Create) |  |            |
+ +-----+-----+  +------+------+  +----+-----+  +-----+------+
+       |               |              |               |
+ ======|===============|==============|===============|========
+       v               v              v               v
+ ORCHESTRATOR (Router Agent)
+ +----------------------------------------------------------------+
+ |  Intent Analyzer  |  Agent Dispatcher  |  Result Merger        |
+ |  (NLU + Intent    |  (Parallel/Seq     |  (Multi-Agent         |
+ |   Classification) |   Scheduling)      |   Output Fusion)      |
+ +--------+----------+--------+----------+-----------+------------+
+          |                   |                      |
+ =========|===================|======================|============
+          v                   v                      v
+ AGENT POOL (Worker Agents)
+ +----------+ +----------+ +----------+ +----------+ +----------+
+ | Planner  | | Executor | | Reviewer | | Research | | Creative |
+ |  Agent   | |  Agent   | |  Agent   | |  Agent   | |  Agent   |
+ +----+-----+ +----+-----+ +----+-----+ +----+-----+ +----+-----+
+      |            |            |            |            |
+ =====|============|============|============|============|=======
+      v            v            v            v            v
+ SKILL EXECUTION ENGINE
+ +----------------------------------------------------------------+
+ |  Skill Registry  |  Skill Loader    |  Skill Sandbox           |
+ |  (Index/Search)  |  (Dynamic Load)  |  (Isolated Runtime)      |
+ +------------------+------------------+--------------------------+
+                           |
+ ==========================|======================================
+                           v
+ CONTEXT & MEMORY LAYER
+ +----------------------------------------------------------------+
+ | Working Memory | Episodic Memory  | Semantic Memory            |
+ | (Session TTL)  | (Persistent)     | (Vector DB / Permanent)    |
+ +----------------+------------------+----------------------------+
+ |         Shared Context Bus  (Pub/Sub + State Snapshots)        |
+ +----------------------------------------------------------------+
+</pre>
+      </div>
+
+      <h3>3.2 Component Responsibilities</h3>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Component</th><th>Responsibility</th></tr>
+        </thead>
+        <tbody>
+          <tr><td rowspan="3"><strong>Orchestrator</strong></td><td>Intent Analyzer</td><td>사용자 입력의 의도 분류, 필요 스킬 판별, 복잡도 평가</td></tr>
+          <tr><td>Agent Dispatcher</td><td>작업을 최적 에이전트에 배정, 병렬/순차 실행 스케줄링</td></tr>
+          <tr><td>Result Merger</td><td>여러 에이전트 출력을 일관된 단일 응답으로 통합</td></tr>
+          <tr><td rowspan="3"><strong>Skill Engine</strong></td><td>Skill Registry</td><td>스킬 메타데이터 인덱싱, 검색, 버전 관리</td></tr>
+          <tr><td>Skill Loader</td><td>YAML 정의를 런타임 실행 가능한 형태로 동적 로딩</td></tr>
+          <tr><td>Skill Sandbox</td><td>격리된 환경에서 스킬 실행, 리소스 제한, 타임아웃 관리</td></tr>
+          <tr><td rowspan="2"><strong>Memory Layer</strong></td><td>Context Bus</td><td>에이전트 간 상태 공유, 메시지 라우팅, 동시성 제어</td></tr>
+          <tr><td>Memory Manager</td><td>3계층 메모리 읽기/쓰기, 컨텍스트 압축, RAG 검색</td></tr>
+        </tbody>
+      </table>
+
+      <h3>3.3 Technology Stack</h3>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>LLM Backend</td><td>Claude / GPT / Open-source models</td><td>에이전트 추론 엔진</td></tr>
+          <tr><td>Orchestration</td><td>Custom Python + LangGraph</td><td>에이전트 워크플로우 관리</td></tr>
+          <tr><td>Message Queue</td><td>Redis Streams / NATS</td><td>에이전트 간 비동기 통신</td></tr>
+          <tr><td>Vector DB</td><td>Pinecone / Qdrant / ChromaDB</td><td>Semantic Memory 저장</td></tr>
+          <tr><td>Persistent DB</td><td>PostgreSQL</td><td>Episodic Memory, 사용자 데이터</td></tr>
+          <tr><td>Cache</td><td>Redis</td><td>Working Memory, 세션 상태</td></tr>
+          <tr><td>Frontend</td><td>React / Next.js</td><td>Skill Store, Editor UI</td></tr>
+          <tr><td>API Gateway</td><td>FastAPI</td><td>REST + WebSocket API</td></tr>
+          <tr><td>Infra</td><td>Kubernetes + Docker</td><td>에이전트 컨테이너 오케스트레이션</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 4. Agent Design -->
+      <div class="page-break"></div>
+      <h2 id="s4"><span class="section-num">04</span>Agent Design</h2>
+
+      <h3>4.1 Agent Types & Roles</h3>
+      <table>
+        <thead>
+          <tr><th>Agent</th><th>Role</th><th>Primary Skills</th><th>Trigger Condition</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Planner</strong></td>
+            <td>복잡한 작업을 하위 작업으로 분해하고 실행 계획(DAG)을 수립</td>
+            <td>task-decomposer, dependency-resolver</td>
+            <td>복합 의도 감지 시 (2+ sub-tasks)</td>
+          </tr>
+          <tr>
+            <td><strong>Executor</strong></td>
+            <td>개별 스킬을 호출하여 실제 작업을 수행</td>
+            <td>All registered skills</td>
+            <td>실행 가능한 단위 작업 배정 시</td>
+          </tr>
+          <tr>
+            <td><strong>Reviewer</strong></td>
+            <td>Executor 결과를 검증하고 품질 기준 충족 여부를 판정</td>
+            <td>validator, fact-checker, quality-scorer</td>
+            <td>Executor 완료 후 자동 실행</td>
+          </tr>
+          <tr>
+            <td><strong>Research</strong></td>
+            <td>정보 수집, 문서 분석, 데이터 검색을 수행</td>
+            <td>web-search, doc-parser, data-fetcher</td>
+            <td>정보 부족 또는 검증 필요 시</td>
+          </tr>
+          <tr>
+            <td><strong>Creative</strong></td>
+            <td>콘텐츠 생성, 아이디어 발상, 창작 작업을 수행</td>
+            <td>text-generator, template-engine, brainstormer</td>
+            <td>생성형 작업 감지 시</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>4.2 Agent Communication Protocol</h3>
+      <pre><code><span class="code-comment">// Agent Message Format</span>
+{
+  <span class="code-string">"message_id"</span>: <span class="code-string">"msg-uuid-001"</span>,
+  <span class="code-string">"from_agent"</span>: <span class="code-string">"planner"</span>,
+  <span class="code-string">"to_agent"</span>: <span class="code-string">"executor"</span>,
+  <span class="code-string">"type"</span>: <span class="code-string">"task_assignment"</span>,   <span class="code-comment">// task_assignment | result | feedback | escalation</span>
+  <span class="code-string">"payload"</span>: {
+    <span class="code-string">"task_id"</span>: <span class="code-string">"task-003"</span>,
+    <span class="code-string">"skill_id"</span>: <span class="code-string">"email-composer"</span>,
+    <span class="code-string">"inputs"</span>: { <span class="code-string">"context"</span>: <span class="code-string">"..."</span>, <span class="code-string">"tone"</span>: <span class="code-string">"formal"</span> },
+    <span class="code-string">"priority"</span>: <span class="code-string">"high"</span>,
+    <span class="code-string">"deadline_ms"</span>: <span class="code-type">30000</span>
+  },
+  <span class="code-string">"context_ref"</span>: <span class="code-string">"session-abc-123"</span>,
+  <span class="code-string">"timestamp"</span>: <span class="code-string">"2026-02-21T09:00:00Z"</span>
+}</code></pre>
+
+      <h3>4.3 Agent Lifecycle</h3>
+      <div class="flow-container">
+        <span class="flow-step">IDLE</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">ASSIGNED</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">LOADING SKILL</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">EXECUTING</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">REVIEWING</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">COMPLETE</span>
+      </div>
+      <p style="font-size:13px; color:var(--text-tertiary);">* REVIEWING 단계에서 품질 미달 시 EXECUTING으로 롤백 (최대 3회)</p>
+
+      <!-- 5. Agentic Loop -->
+      <h2 id="s5"><span class="section-num">05</span>Agentic Loop</h2>
+
+      <h3>5.1 Loop Architecture</h3>
+      <p>Agentic Loop는 시스템의 핵심 실행 패턴으로, 에이전트가 자율적으로 계획-실행-검증을 반복하여 최적의 결과를 도출합니다.</p>
+
+      <div class="arch-diagram">
+<pre>
+                    User Input
+                        |
+                        v
+              +-------------------+
+              |  Intent Analysis  |
+              |  (Orchestrator)   |
+              +--------+----------+
+                       |
+                       v
+              +-------------------+
+              |  Plan Generation  |  <--- Planner Agent
+              |  (Task DAG)       |
+              +--------+----------+
+                       |
+           +-----------+-----------+
+           |                       |
+           v                       v
+  +----------------+     +----------------+
+  | Parallel Task  |     | Parallel Task  |  <--- Executor Agents
+  |   Execution    |     |   Execution    |       (with Skills)
+  +-------+--------+     +-------+--------+
+          |                       |
+          +-----------+-----------+
+                      |
+                      v
+            +-------------------+
+            |  Quality Review   |  <--- Reviewer Agent
+            |  (Validation)     |
+            +--------+----------+
+                     |
+              +------+------+
+              |             |
+         [PASS]         [FAIL]
+              |             |
+              v             v
+     +-----------+  +--------------+
+     |  Response |  |   Re-plan &  | ----> (Back to Plan Generation)
+     |  Assembly |  |   Re-execute |       Max 3 iterations
+     +-----+-----+  +--------------+
+           |
+           v
+      User Output
+</pre>
+      </div>
+
+      <h3>5.2 Loop Control Parameters</h3>
+      <table>
+        <thead>
+          <tr><th>Parameter</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>max_iterations</code></td><td>3</td><td>최대 반복 횟수 (무한 루프 방지)</td></tr>
+          <tr><td><code>quality_threshold</code></td><td>0.85</td><td>Reviewer 통과 최소 점수 (0~1)</td></tr>
+          <tr><td><code>timeout_ms</code></td><td>60000</td><td>전체 루프 최대 실행 시간</td></tr>
+          <tr><td><code>parallel_limit</code></td><td>5</td><td>동시 실행 에이전트 최대 수</td></tr>
+          <tr><td><code>escalation_policy</code></td><td>human_review</td><td>최대 반복 초과 시 처리 정책</td></tr>
+        </tbody>
+      </table>
+
+      <h3>5.3 Execution Example</h3>
+      <div class="callout callout-success">
+        <strong>Scenario: "지난달 매출 데이터로 임원 보고서 만들어줘"</strong>
+        <p><br>
+        <strong>Iteration 1:</strong><br>
+        1. Orchestrator: 3개 하위 작업으로 분해<br>
+        2. Research Agent: <code>excel-analyzer</code> 스킬로 매출 데이터 분석<br>
+        3. Creative Agent: <code>doc-drafter</code> 스킬로 보고서 초안 작성<br>
+        4. Reviewer Agent: 수치 불일치 2건 발견 &rarr; FAIL (score: 0.72)<br><br>
+        <strong>Iteration 2:</strong><br>
+        5. Executor Agent: 수치 교정 후 재작성<br>
+        6. Reviewer Agent: PASS (score: 0.93)<br>
+        7. Result Merger: 최종 보고서 + 발표 노트 통합 출력</p>
+      </div>
+
+      <!-- 6. Memory & Context -->
+      <div class="page-break"></div>
+      <h2 id="s6"><span class="section-num">06</span>Memory & Context Management</h2>
+
+      <h3>6.1 Three-Layer Memory Architecture</h3>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>TTL</th><th>Storage</th><th>Content</th><th>Access Pattern</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Working Memory</strong></td>
+            <td>Session</td>
+            <td>Redis</td>
+            <td>현재 대화, 에이전트 상태, 실행 중 스킬 스택</td>
+            <td>Read/Write per turn</td>
+          </tr>
+          <tr>
+            <td><strong>Episodic Memory</strong></td>
+            <td>Persistent</td>
+            <td>PostgreSQL</td>
+            <td>과거 세션 요약, 작업 이력, 사용 패턴</td>
+            <td>Write per session, Read on-demand</td>
+          </tr>
+          <tr>
+            <td><strong>Semantic Memory</strong></td>
+            <td>Permanent</td>
+            <td>Vector DB</td>
+            <td>사용자 선호, 도메인 지식, 스킬 메타데이터</td>
+            <td>RAG retrieval per query</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>6.2 Working Memory Schema</h3>
+      <pre><code>{
+  <span class="code-string">"session_id"</span>: <span class="code-string">"session-abc-123"</span>,
+  <span class="code-string">"user_id"</span>: <span class="code-string">"user-001"</span>,
+  <span class="code-string">"messages"</span>: [
+    { <span class="code-string">"role"</span>: <span class="code-string">"user"</span>, <span class="code-string">"content"</span>: <span class="code-string">"..."</span>, <span class="code-string">"timestamp"</span>: <span class="code-string">"..."</span> },
+    { <span class="code-string">"role"</span>: <span class="code-string">"assistant"</span>, <span class="code-string">"content"</span>: <span class="code-string">"..."</span>, <span class="code-string">"agent"</span>: <span class="code-string">"creative"</span> }
+  ],
+  <span class="code-string">"active_agents"</span>: [<span class="code-string">"executor"</span>, <span class="code-string">"reviewer"</span>],
+  <span class="code-string">"skill_stack"</span>: [
+    { <span class="code-string">"skill_id"</span>: <span class="code-string">"email-composer"</span>, <span class="code-string">"status"</span>: <span class="code-string">"executing"</span>, <span class="code-string">"started_at"</span>: <span class="code-string">"..."</span> }
+  ],
+  <span class="code-string">"shared_vars"</span>: {
+    <span class="code-string">"analyzed_data"</span>: { <span class="code-comment">/* cross-agent shared state */</span> }
+  },
+  <span class="code-string">"token_budget"</span>: {
+    <span class="code-string">"used"</span>: <span class="code-type">34000</span>,
+    <span class="code-string">"limit"</span>: <span class="code-type">128000</span>,
+    <span class="code-string">"compression_threshold"</span>: <span class="code-type">100000</span>
+  }
+}</code></pre>
+
+      <h3>6.3 Context Window Management Strategy</h3>
+      <table>
+        <thead>
+          <tr><th>Strategy</th><th>Trigger</th><th>Action</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Sliding Window</strong></td><td>Every turn</td><td>최근 N턴만 Working Memory에 유지</td></tr>
+          <tr><td><strong>Summarization</strong></td><td>Token &gt; 70% of limit</td><td>오래된 대화를 LLM 기반 요약으로 압축</td></tr>
+          <tr><td><strong>RAG Retrieval</strong></td><td>On-demand</td><td>Semantic Memory에서 관련 장기 기억 검색</td></tr>
+          <tr><td><strong>Priority Queue</strong></td><td>Token &gt; 90% of limit</td><td>중요도 기반 메시지 우선순위 정렬, 저순위 drop</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 7. Skill Engine -->
+      <h2 id="s7"><span class="section-num">07</span>Skill Execution Engine</h2>
+
+      <h3>7.1 Skill Lifecycle</h3>
+      <div class="flow-container">
+        <span class="flow-step">Define (YAML)</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Validate</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Test</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Publish</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Register</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Load</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Execute</span>
+        <span class="flow-arrow">&rarr;</span>
+        <span class="flow-step">Monitor</span>
+      </div>
+
+      <h3>7.2 Execution Pipeline</h3>
+      <pre><code><span class="code-comment"># Skill Execution Pipeline (Pseudocode)</span>
+
+<span class="code-keyword">def</span> <span class="code-type">execute_skill</span>(skill_id, inputs, context):
+    <span class="code-comment"># 1. Load skill definition from Registry</span>
+    skill = registry.load(skill_id)
+
+    <span class="code-comment"># 2. Validate inputs against schema</span>
+    validated = schema_validator.validate(inputs, skill.input_schema)
+
+    <span class="code-comment"># 3. Resolve prompt template with variables</span>
+    prompt = template_engine.resolve(skill.prompt_template, validated)
+
+    <span class="code-comment"># 4. Inject context (user preferences, history)</span>
+    prompt = context_injector.enrich(prompt, context)
+
+    <span class="code-comment"># 5. Execute in sandbox with resource limits</span>
+    result = sandbox.execute(
+        prompt = prompt,
+        model = skill.settings.model,
+        max_tokens = skill.settings.max_tokens,
+        temperature = skill.settings.temperature,
+        timeout_ms = skill.settings.timeout_ms
+    )
+
+    <span class="code-comment"># 6. Validate output against schema</span>
+    output = schema_validator.validate_output(result, skill.output_schema)
+
+    <span class="code-comment"># 7. Log execution metrics</span>
+    metrics.log(skill_id, tokens=result.tokens, latency=result.latency)
+
+    <span class="code-keyword">return</span> output</code></pre>
+
+      <h3>7.3 Sandbox Constraints</h3>
+      <table>
+        <thead>
+          <tr><th>Constraint</th><th>Limit</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Execution Timeout</td><td>30 seconds</td><td>무한 실행 방지</td></tr>
+          <tr><td>Max Output Tokens</td><td>16,000</td><td>비용 및 응답 크기 제한</td></tr>
+          <tr><td>Memory Limit</td><td>256 MB</td><td>리소스 독점 방지</td></tr>
+          <tr><td>Network Access</td><td>Whitelist only</td><td>보안 - 승인된 API만 허용</td></tr>
+          <tr><td>Retry Limit</td><td>3 attempts</td><td>반복 실패 시 에스컬레이션</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 8. Skill Schema -->
+      <div class="page-break"></div>
+      <h2 id="s8"><span class="section-num">08</span>Skill Schema Specification</h2>
+
+      <h3>8.1 Complete Schema Definition</h3>
+      <pre><code><span class="code-comment"># SkillForge Skill Definition Schema v1.0</span>
+
+<span class="code-keyword">skill</span>:
+  <span class="code-type">id</span>: <span class="code-string">"email-composer"</span>            <span class="code-comment"># Unique, lowercase, hyphens</span>
+  <span class="code-type">name</span>: <span class="code-string">"Business Email Composer"</span>   <span class="code-comment"># Display name</span>
+  <span class="code-type">version</span>: <span class="code-string">"2.0.0"</span>                  <span class="code-comment"># Semantic versioning</span>
+  <span class="code-type">author</span>: <span class="code-string">"user-001"</span>
+  <span class="code-type">category</span>: <span class="code-string">"email"</span>                  <span class="code-comment"># Predefined categories</span>
+  <span class="code-type">description</span>: <span class="code-string">"Compose business emails with appropriate tone"</span>
+  <span class="code-type">icon</span>: <span class="code-string">"email"</span>
+
+  <span class="code-keyword">inputs</span>:
+    - <span class="code-type">name</span>: <span class="code-string">"context"</span>
+      <span class="code-type">type</span>: <span class="code-string">"string"</span>
+      <span class="code-type">required</span>: true
+      <span class="code-type">description</span>: <span class="code-string">"Email situation description"</span>
+    - <span class="code-type">name</span>: <span class="code-string">"tone"</span>
+      <span class="code-type">type</span>: <span class="code-string">"enum"</span>
+      <span class="code-type">values</span>: [<span class="code-string">"formal"</span>, <span class="code-string">"friendly"</span>, <span class="code-string">"urgent"</span>, <span class="code-string">"apologetic"</span>]
+      <span class="code-type">default</span>: <span class="code-string">"formal"</span>
+
+  <span class="code-keyword">outputs</span>:
+    - <span class="code-type">name</span>: <span class="code-string">"subject"</span>
+      <span class="code-type">type</span>: <span class="code-string">"string"</span>
+    - <span class="code-type">name</span>: <span class="code-string">"body"</span>
+      <span class="code-type">type</span>: <span class="code-string">"string"</span>
+
+  <span class="code-keyword">prompt_template</span>: |
+    You are a business email expert.
+    Situation: {{context}}
+    Tone: {{tone}}
+    Write a professional email.
+
+  <span class="code-keyword">settings</span>:
+    <span class="code-type">max_tokens</span>: 2000
+    <span class="code-type">temperature</span>: 0.7
+    <span class="code-type">model</span>: <span class="code-string">"default"</span>
+    <span class="code-type">requires_review</span>: true
+
+  <span class="code-keyword">permissions</span>:
+    - <span class="code-string">"read:user_context"</span>
+    - <span class="code-string">"write:clipboard"</span>
+
+  <span class="code-keyword">tags</span>: [<span class="code-string">"email"</span>, <span class="code-string">"business"</span>, <span class="code-string">"communication"</span>]</code></pre>
+
+      <h3>8.2 Field Reference</h3>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>string</td><td>Yes</td><td>유일 식별자. <code>[a-z0-9-]+</code> 패턴</td></tr>
+          <tr><td><code>name</code></td><td>string</td><td>Yes</td><td>표시 이름 (다국어 가능)</td></tr>
+          <tr><td><code>version</code></td><td>string</td><td>Yes</td><td>시맨틱 버전 (MAJOR.MINOR.PATCH)</td></tr>
+          <tr><td><code>category</code></td><td>enum</td><td>Yes</td><td>document, email, data, schedule, presentation, hr, translation, automation, knowledge, other</td></tr>
+          <tr><td><code>inputs[]</code></td><td>array</td><td>Yes</td><td>입력 파라미터 정의. type: string|number|boolean|enum|array|object</td></tr>
+          <tr><td><code>outputs[]</code></td><td>array</td><td>Yes</td><td>출력 필드 정의</td></tr>
+          <tr><td><code>prompt_template</code></td><td>string</td><td>Yes</td><td>프롬프트 템플릿. <code>{{var}}</code> 변수 치환 지원</td></tr>
+          <tr><td><code>settings</code></td><td>object</td><td>No</td><td>실행 옵션 (max_tokens, temperature 등)</td></tr>
+          <tr><td><code>permissions[]</code></td><td>array</td><td>No</td><td>필요 권한 목록</td></tr>
+          <tr><td><code>tags[]</code></td><td>array</td><td>No</td><td>검색용 태그</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 9. Skill Store -->
+      <h2 id="s9"><span class="section-num">09</span>Skill Store Platform</h2>
+
+      <h3>9.1 Store Features</h3>
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Browse & Search</strong></td><td>카테고리 필터, 키워드 검색, 인기/최신/평점 정렬</td></tr>
+          <tr><td><strong>Skill Editor</strong></td><td>비주얼 4탭 편집기 (Metadata, Prompt, I/O Schema, Settings)</td></tr>
+          <tr><td><strong>Validation Engine</strong></td><td>11개 항목 자동 검증 (ID 형식, 필수 필드, 변수 매칭 등)</td></tr>
+          <tr><td><strong>Test Runner</strong></td><td>프롬프트 변수 치환 시뮬레이션, 토큰 수/실행시간 측정</td></tr>
+          <tr><td><strong>YAML Export</strong></td><td>실시간 YAML 코드 생성 및 복사</td></tr>
+          <tr><td><strong>Fork & Edit</strong></td><td>기존 스킬을 복제하여 커스터마이징</td></tr>
+          <tr><td><strong>Analytics Dashboard</strong></td><td>스킬 설치 수, 실행 횟수, 평점 통계</td></tr>
+          <tr><td><strong>Version Management</strong></td><td>시맨틱 버전 기반 업데이트 관리</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9.2 Store API Endpoints</h3>
+      <pre><code><span class="code-comment"># Skill Store REST API</span>
+
+GET    /api/v1/skills                <span class="code-comment"># List skills (paginated)</span>
+GET    /api/v1/skills/:id            <span class="code-comment"># Get skill detail</span>
+POST   /api/v1/skills                <span class="code-comment"># Publish new skill</span>
+PUT    /api/v1/skills/:id            <span class="code-comment"># Update skill</span>
+DELETE /api/v1/skills/:id            <span class="code-comment"># Unpublish skill</span>
+
+GET    /api/v1/skills/search?q=      <span class="code-comment"># Search skills</span>
+GET    /api/v1/skills/categories     <span class="code-comment"># List categories</span>
+
+POST   /api/v1/skills/:id/install    <span class="code-comment"># Install skill</span>
+DELETE /api/v1/skills/:id/install    <span class="code-comment"># Uninstall skill</span>
+
+POST   /api/v1/skills/:id/execute    <span class="code-comment"># Execute skill</span>
+POST   /api/v1/skills/:id/validate   <span class="code-comment"># Validate skill YAML</span>
+POST   /api/v1/skills/:id/test       <span class="code-comment"># Test run skill</span>
+
+POST   /api/v1/skills/:id/rate       <span class="code-comment"># Rate skill</span>
+POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</span></code></pre>
+
+      <!-- 10. Skills Catalog -->
+      <h2 id="s10"><span class="section-num">10</span>Built-in Skills Catalog</h2>
+
+      <h3>10.1 Category Overview</h3>
+      <table>
+        <thead>
+          <tr><th>Category</th><th>Skills Count</th><th>Representative Skills</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Document</td><td>4</td><td>doc-drafter, meeting-minutes, contract-reviewer, sop-generator</td></tr>
+          <tr><td>Email</td><td>2</td><td>email-composer, email-summarizer</td></tr>
+          <tr><td>Data Analysis</td><td>1</td><td>excel-analyzer</td></tr>
+          <tr><td>Schedule</td><td>1</td><td>schedule-optimizer</td></tr>
+          <tr><td>Presentation</td><td>2</td><td>slide-outliner, talking-points</td></tr>
+          <tr><td>HR</td><td>1</td><td>jd-writer</td></tr>
+          <tr><td>Translation</td><td>2</td><td>biz-translator, proofreader</td></tr>
+          <tr><td>Automation</td><td>1</td><td>report-scheduler</td></tr>
+        </tbody>
+      </table>
+
+      <h3>10.2 Skill Detail: Top 5</h3>
+      <table>
+        <thead>
+          <tr><th>Skill</th><th>Input</th><th>Output</th><th>Agent</th><th>Avg. Tokens</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>email-composer</code></td><td>context, tone, language</td><td>subject, body</td><td>Executor + Creative</td><td>~800</td></tr>
+          <tr><td><code>doc-drafter</code></td><td>topic, format, length</td><td>document</td><td>Creative + Reviewer</td><td>~2,000</td></tr>
+          <tr><td><code>excel-analyzer</code></td><td>data, perspective</td><td>analysis object</td><td>Research + Executor</td><td>~1,500</td></tr>
+          <tr><td><code>biz-translator</code></td><td>source_text, langs</td><td>translation</td><td>Executor</td><td>~1,200</td></tr>
+          <tr><td><code>meeting-minutes</code></td><td>transcript</td><td>structured minutes</td><td>Creative + Reviewer</td><td>~1,800</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 11. Security -->
+      <h2 id="s11"><span class="section-num">11</span>Security & Safety</h2>
+
+      <h3>11.1 Security Model</h3>
+      <table>
+        <thead>
+          <tr><th>Layer</th><th>Mechanism</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Skill Sandbox</strong></td><td>Container Isolation</td><td>각 스킬은 격리된 컨테이너에서 실행, 호스트 시스템 접근 차단</td></tr>
+          <tr><td><strong>Permission System</strong></td><td>Capability-based</td><td>스킬은 명시적으로 선언한 권한만 사용 가능</td></tr>
+          <tr><td><strong>Prompt Injection Guard</strong></td><td>Input Sanitization</td><td>사용자 입력에서 프롬프트 인젝션 패턴 탐지 및 차단</td></tr>
+          <tr><td><strong>Output Validation</strong></td><td>Schema Enforcement</td><td>출력이 정의된 스키마를 벗어나면 거부</td></tr>
+          <tr><td><strong>Rate Limiting</strong></td><td>Token Bucket</td><td>사용자/스킬별 실행 횟수 및 토큰 소비 제한</td></tr>
+          <tr><td><strong>Audit Logging</strong></td><td>Immutable Log</td><td>모든 스킬 실행, 에이전트 통신을 변경 불가 로그에 기록</td></tr>
+          <tr><td><strong>Human-in-the-Loop</strong></td><td>Review Gate</td><td>민감 작업은 사용자 확인 후 실행</td></tr>
+        </tbody>
+      </table>
+
+      <h3>11.2 Skill Review Policy</h3>
+      <ol>
+        <li><strong>Automated Scan:</strong> 프롬프트 인젝션, 유해 콘텐츠 자동 탐지</li>
+        <li><strong>Schema Validation:</strong> 필수 필드, 타입, 권한 선언 검증</li>
+        <li><strong>Community Review:</strong> 일정 다운로드 수 초과 시 커뮤니티 리뷰 프로세스</li>
+        <li><strong>Reputation Score:</strong> 작성자 신뢰도 기반 자동 승인/수동 검토 분기</li>
+      </ol>
+
+      <!-- 12. Roadmap -->
+      <div class="page-break"></div>
+      <h2 id="s12"><span class="section-num">12</span>Implementation Roadmap</h2>
+
+      <table>
+        <thead>
+          <tr><th>Phase</th><th>Timeline</th><th>Deliverables</th><th>Status</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Phase 1: Foundation</strong></td>
+            <td>Month 1-2</td>
+            <td>
+              &bull; Orchestrator + 3 Core Agents (Planner, Executor, Reviewer)<br>
+              &bull; Working Memory 구현<br>
+              &bull; Skill Engine (Registry, Loader, Sandbox)<br>
+              &bull; 5개 기본 스킬
+            </td>
+            <td><span class="tag tag-orange">In Progress</span></td>
+          </tr>
+          <tr>
+            <td><strong>Phase 2: Platform</strong></td>
+            <td>Month 3-4</td>
+            <td>
+              &bull; Research + Creative Agent 추가<br>
+              &bull; Episodic + Semantic Memory<br>
+              &bull; Skill Store (Browse, Install, Search)<br>
+              &bull; Skill Editor + Validator<br>
+              &bull; 15+ 기본 스킬
+            </td>
+            <td><span class="tag tag-blue">Planned</span></td>
+          </tr>
+          <tr>
+            <td><strong>Phase 3: Community</strong></td>
+            <td>Month 5-6</td>
+            <td>
+              &bull; Fork & Share 기능<br>
+              &bull; Rating & Review 시스템<br>
+              &bull; Analytics Dashboard<br>
+              &bull; API 공개<br>
+              &bull; 커뮤니티 100+ 스킬 목표
+            </td>
+            <td><span class="tag tag-blue">Planned</span></td>
+          </tr>
+          <tr>
+            <td><strong>Phase 4: Scale</strong></td>
+            <td>Month 7+</td>
+            <td>
+              &bull; 유료 스킬 마켓플레이스<br>
+              &bull; Enterprise SSO + RBAC<br>
+              &bull; 멀티 LLM 지원<br>
+              &bull; Plugin Ecosystem<br>
+              &bull; 모바일 앱
+            </td>
+            <td><span class="tag tag-purple">Future</span></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <!-- 13. Revision History -->
+      <h2 id="s13"><span class="section-num">13</span>Revision History</h2>
+
+      <div class="version-entry">
+        <span class="version-tag">v1.0.0</span>
+        <div class="version-info">
+          <strong>Initial Release</strong> &mdash; 2026-02-21<br>
+          Full system architecture, agent design, memory model, skill schema, store platform, and roadmap.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    // Active TOC tracking
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          document.querySelectorAll('.toc-link').forEach(l => l.classList.remove('active'));
+          const id = entry.target.id;
+          const link = document.querySelector(`.toc-link[href="#${id}"]`);
+          if (link) link.classList.add('active');
+        }
+      });
+    }, { rootMargin: '-20% 0px -70% 0px' });
+
+    document.querySelectorAll('h2[id], .doc-cover[id]').forEach(el => observer.observe(el));
+  </script>
+</body>
+</html>

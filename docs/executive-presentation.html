@@ -1,0 +1,1289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SkillForge - Executive Presentation</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a12;
+      --bg-card: #12121e;
+      --bg-card-alt: #181828;
+      --text: #f0f0f8;
+      --text-dim: #9090b0;
+      --text-muted: #5a5a7a;
+      --accent: #6366f1;
+      --accent2: #a855f7;
+      --accent3: #06b6d4;
+      --success: #22c55e;
+      --warning: #f59e0b;
+      --error: #ef4444;
+      --gradient: linear-gradient(135deg, #6366f1, #a855f7, #06b6d4);
+      --border: rgba(255,255,255,0.06);
+      --font: 'Inter', -apple-system, sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; scroll-snap-type: y mandatory; }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text);
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+    }
+
+    /* ===== Slide System ===== */
+    .slide {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      padding: 60px 80px;
+      position: relative;
+      scroll-snap-align: start;
+      overflow: hidden;
+    }
+
+    .slide-inner {
+      max-width: 1200px;
+      width: 100%;
+      margin: 0 auto;
+    }
+
+    /* Slide number */
+    .slide-num {
+      position: absolute;
+      top: 32px;
+      right: 40px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text-muted);
+      letter-spacing: 0.1em;
+    }
+
+    /* Progress bar */
+    .progress-bar {
+      position: fixed;
+      top: 0;
+      left: 0;
+      height: 3px;
+      background: var(--gradient);
+      z-index: 100;
+      transition: width 300ms ease;
+    }
+
+    /* Navigation */
+    .slide-nav {
+      position: fixed;
+      right: 24px;
+      top: 50%;
+      transform: translateY(-50%);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 50;
+    }
+
+    .slide-nav-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      border: none;
+      cursor: pointer;
+      transition: all 200ms ease;
+      padding: 0;
+    }
+
+    .slide-nav-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(99,102,241,0.5);
+      transform: scale(1.4);
+    }
+
+    .slide-nav-dot:hover {
+      background: var(--accent);
+      transform: scale(1.3);
+    }
+
+    /* ===== Typography ===== */
+    .mega-title {
+      font-size: 64px;
+      font-weight: 900;
+      line-height: 1.05;
+      letter-spacing: -0.04em;
+    }
+
+    .slide-title {
+      font-size: 42px;
+      font-weight: 800;
+      line-height: 1.15;
+      letter-spacing: -0.03em;
+      margin-bottom: 24px;
+    }
+
+    .slide-subtitle {
+      font-size: 20px;
+      color: var(--text-dim);
+      line-height: 1.6;
+      max-width: 680px;
+    }
+
+    .section-label {
+      display: inline-block;
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 16px;
+      padding: 4px 14px;
+      background: rgba(99,102,241,0.12);
+      border-radius: 999px;
+    }
+
+    .gradient-text {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    /* ===== Cover Slide ===== */
+    .cover-bg {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse at 30% 20%, rgba(99,102,241,0.15) 0%, transparent 50%),
+        radial-gradient(ellipse at 70% 80%, rgba(168,85,247,0.1) 0%, transparent 50%);
+    }
+
+    .cover-content {
+      position: relative;
+      z-index: 1;
+    }
+
+    .cover-meta {
+      margin-top: 48px;
+      display: flex;
+      gap: 32px;
+      font-size: 14px;
+      color: var(--text-muted);
+    }
+
+    .cover-meta span {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* ===== Grid Layouts ===== */
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 20px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    /* ===== Cards ===== */
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 28px;
+      transition: all 300ms ease;
+    }
+
+    .card:hover {
+      border-color: rgba(99,102,241,0.3);
+      transform: translateY(-2px);
+    }
+
+    .card-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      margin-bottom: 16px;
+    }
+
+    .card-icon-purple { background: rgba(168,85,247,0.15); }
+    .card-icon-blue { background: rgba(99,102,241,0.15); }
+    .card-icon-cyan { background: rgba(6,182,212,0.15); }
+    .card-icon-green { background: rgba(34,197,94,0.15); }
+    .card-icon-orange { background: rgba(245,158,11,0.15); }
+    .card-icon-red { background: rgba(239,68,68,0.15); }
+
+    .card h3 {
+      font-size: 17px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .card p {
+      font-size: 14px;
+      color: var(--text-dim);
+      line-height: 1.6;
+    }
+
+    /* ===== Stat Cards ===== */
+    .stat-card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    .stat-value {
+      font-size: 42px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+      line-height: 1;
+      margin-bottom: 8px;
+    }
+
+    .stat-value.gradient {
+      background: var(--gradient);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .stat-label {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .stat-detail {
+      font-size: 12px;
+      color: var(--text-dim);
+      margin-top: 4px;
+    }
+
+    /* ===== Comparison Table ===== */
+    .compare-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 24px;
+    }
+
+    .compare-table th {
+      padding: 14px 20px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+      border-bottom: 2px solid var(--border);
+    }
+
+    .compare-table th:nth-child(2) { color: var(--text-muted); }
+    .compare-table th:nth-child(3) { color: var(--accent); }
+
+    .compare-table td {
+      padding: 14px 20px;
+      font-size: 14px;
+      color: var(--text-dim);
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    .compare-table td:first-child {
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+    }
+
+    .compare-table td:nth-child(3) {
+      color: var(--text);
+    }
+
+    .badge-old {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(239,68,68,0.12);
+      color: var(--error);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .badge-new {
+      display: inline-block;
+      padding: 2px 8px;
+      background: rgba(34,197,94,0.12);
+      color: var(--success);
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    /* ===== Architecture Diagram ===== */
+    .arch-visual {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 36px;
+      margin-top: 24px;
+    }
+
+    .arch-row {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 12px;
+      align-items: stretch;
+    }
+
+    .arch-box {
+      flex: 1;
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 13px;
+      font-weight: 600;
+      text-align: center;
+      border: 1px solid;
+    }
+
+    .arch-user { background: rgba(99,102,241,0.08); border-color: rgba(99,102,241,0.2); color: #818cf8; }
+    .arch-orch { background: rgba(168,85,247,0.08); border-color: rgba(168,85,247,0.2); color: #c084fc; }
+    .arch-agent { background: rgba(6,182,212,0.08); border-color: rgba(6,182,212,0.2); color: #22d3ee; }
+    .arch-skill { background: rgba(34,197,94,0.08); border-color: rgba(34,197,94,0.2); color: #4ade80; }
+    .arch-mem { background: rgba(245,158,11,0.08); border-color: rgba(245,158,11,0.2); color: #fbbf24; }
+
+    .arch-arrow {
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 18px;
+      margin: 4px 0;
+    }
+
+    .arch-label {
+      position: absolute;
+      left: -8px;
+      top: 50%;
+      transform: translateY(-50%) rotate(-90deg);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    /* ===== Timeline ===== */
+    .timeline {
+      display: flex;
+      gap: 0;
+      margin-top: 32px;
+    }
+
+    .timeline-phase {
+      flex: 1;
+      padding: 20px;
+      border-top: 3px solid var(--text-muted);
+      position: relative;
+    }
+
+    .timeline-phase.active {
+      border-top-color: var(--accent);
+    }
+
+    .timeline-phase.future {
+      border-top-color: var(--text-muted);
+      opacity: 0.6;
+    }
+
+    .timeline-dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      position: absolute;
+      top: -8px;
+      left: 20px;
+    }
+
+    .timeline-phase.active .timeline-dot {
+      background: var(--accent);
+      box-shadow: 0 0 12px rgba(99,102,241,0.5);
+    }
+
+    .timeline-period {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--accent);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-top: 12px;
+      margin-bottom: 8px;
+    }
+
+    .timeline-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    .timeline-items {
+      list-style: none;
+      font-size: 13px;
+      color: var(--text-dim);
+    }
+
+    .timeline-items li {
+      padding: 3px 0;
+    }
+
+    .timeline-items li::before {
+      content: '\2022';
+      color: var(--accent);
+      margin-right: 8px;
+    }
+
+    /* ===== Loop Diagram ===== */
+    .loop-visual {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+      margin: 24px 0;
+    }
+
+    .loop-step {
+      padding: 12px 20px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-align: center;
+      min-width: 120px;
+    }
+
+    .loop-step.highlighted {
+      border-color: var(--accent);
+      box-shadow: 0 0 20px rgba(99,102,241,0.15);
+    }
+
+    .loop-arrow {
+      font-size: 20px;
+      color: var(--text-muted);
+    }
+
+    .loop-branch {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .loop-label {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 10px;
+      border-radius: 999px;
+    }
+
+    .loop-pass { background: rgba(34,197,94,0.12); color: var(--success); }
+    .loop-fail { background: rgba(239,68,68,0.12); color: var(--error); }
+
+    /* ===== Scenario ===== */
+    .scenario-box {
+      background: linear-gradient(135deg, rgba(99,102,241,0.06), rgba(168,85,247,0.06));
+      border: 1px solid rgba(99,102,241,0.15);
+      border-radius: 16px;
+      padding: 28px;
+      margin-top: 20px;
+    }
+
+    .scenario-title {
+      font-size: 16px;
+      font-weight: 700;
+      margin-bottom: 16px;
+      color: var(--accent);
+    }
+
+    .scenario-steps {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .scenario-step {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 14px;
+    }
+
+    .step-num {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 800;
+      flex-shrink: 0;
+    }
+
+    .step-purple { background: rgba(168,85,247,0.15); color: #c084fc; }
+    .step-cyan { background: rgba(6,182,212,0.15); color: #22d3ee; }
+    .step-green { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .step-orange { background: rgba(245,158,11,0.15); color: #fbbf24; }
+
+    .step-agent {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 2px 8px;
+      border-radius: 4px;
+      background: rgba(255,255,255,0.05);
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    /* ===== ROI Section ===== */
+    .roi-highlight {
+      background: linear-gradient(135deg, rgba(34,197,94,0.08), rgba(6,182,212,0.08));
+      border: 1px solid rgba(34,197,94,0.15);
+      border-radius: 16px;
+      padding: 28px;
+      text-align: center;
+    }
+
+    .roi-value {
+      font-size: 56px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #22c55e, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      line-height: 1;
+    }
+
+    .roi-label {
+      font-size: 15px;
+      color: var(--text-dim);
+      margin-top: 8px;
+    }
+
+    /* ===== CTA Slide ===== */
+    .cta-content {
+      text-align: center;
+    }
+
+    .cta-actions {
+      display: flex;
+      justify-content: center;
+      gap: 16px;
+      margin-top: 40px;
+    }
+
+    .cta-btn {
+      padding: 14px 32px;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: 700;
+      font-family: var(--font);
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 200ms ease;
+      border: none;
+    }
+
+    .cta-btn-primary {
+      background: var(--accent);
+      color: white;
+    }
+
+    .cta-btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 30px rgba(99,102,241,0.3);
+    }
+
+    .cta-btn-secondary {
+      background: rgba(255,255,255,0.06);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .cta-btn-secondary:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ===== Responsive ===== */
+    @media (max-width: 900px) {
+      .slide { padding: 40px 24px; }
+      .mega-title { font-size: 36px; }
+      .slide-title { font-size: 28px; }
+      .grid-2, .grid-3, .grid-4 { grid-template-columns: 1fr; }
+      .timeline { flex-direction: column; }
+      .slide-nav { display: none; }
+    }
+
+    /* ===== Print ===== */
+    @media print {
+      .slide { min-height: auto; page-break-after: always; padding: 40px; }
+      .progress-bar, .slide-nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Progress Bar -->
+  <div class="progress-bar" id="progressBar"></div>
+
+  <!-- Slide Navigation Dots -->
+  <nav class="slide-nav" id="slideNav"></nav>
+
+  <!-- ============================
+       SLIDE 1: COVER
+       ============================ -->
+  <section class="slide" id="slide-1">
+    <div class="cover-bg"></div>
+    <div class="slide-inner cover-content">
+      <div class="section-label">Executive Briefing 2026</div>
+      <h1 class="mega-title">
+        <span class="gradient-text">SkillForge</span><br>
+        Multi-Agent<br>
+        AI Platform
+      </h1>
+      <p class="slide-subtitle" style="margin-top: 24px;">
+        Agentic Loop 기반 멀티 에이전트 시스템 & AI Skill Store<br>
+        차세대 업무 자동화 플랫폼 구축 제안
+      </p>
+      <div class="cover-meta">
+        <span>Architecture Team</span>
+        <span>2026.02.21</span>
+        <span>Confidential</span>
+      </div>
+    </div>
+    <div class="slide-num">01 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 2: PROBLEM
+       ============================ -->
+  <section class="slide" id="slide-2">
+    <div class="slide-inner">
+      <div class="section-label">Problem Statement</div>
+      <h2 class="slide-title">현재의 AI 도입,<br>무엇이 문제인가?</h2>
+
+      <div class="grid-3" style="margin-top: 32px;">
+        <div class="card">
+          <div class="card-icon card-icon-red">&#9888;</div>
+          <h3>단일 AI의 한계</h3>
+          <p>하나의 AI가 모든 업무를 순차 처리하여 복잡한 작업에서 품질 저하 발생. 전문성이 분산됨.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon card-icon-orange">&#128336;</div>
+          <h3>반복되는 프롬프트 작성</h3>
+          <p>매번 동일한 지시를 반복 입력. 좋은 프롬프트를 만들어도 공유/재사용이 불가능.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon card-icon-purple">&#128683;</div>
+          <h3>품질 검증 부재</h3>
+          <p>AI 출력물에 대한 자동 검증 체계가 없어 사람이 매번 검수해야 하는 병목.</p>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 16px;">
+        <div class="card">
+          <div class="card-icon card-icon-cyan">&#128274;</div>
+          <h3>확장성 제한</h3>
+          <p>새로운 업무에 AI를 적용하려면 개발팀의 커스터마이징이 필요. 현업 부서가 직접 확장 불가.</p>
+        </div>
+        <div class="card">
+          <div class="card-icon card-icon-blue">&#128065;</div>
+          <h3>맥락 단절</h3>
+          <p>대화가 끝나면 모든 맥락이 사라짐. 사용자의 업무 패턴이나 선호를 학습하지 못함.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">02 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 3: SOLUTION OVERVIEW
+       ============================ -->
+  <section class="slide" id="slide-3">
+    <div class="slide-inner">
+      <div class="section-label">Our Solution</div>
+      <h2 class="slide-title">AI가 <span class="gradient-text">팀으로</span> 일합니다</h2>
+      <p class="slide-subtitle">전문화된 AI 에이전트 팀이 협업하여 복잡한 업무를 자율적으로 처리하고, 누구나 AI 능력을 확장할 수 있는 Skill 생태계를 제공합니다.</p>
+
+      <div class="grid-4" style="margin-top: 40px;">
+        <div class="stat-card">
+          <div class="stat-value gradient">5</div>
+          <div class="stat-label">전문 에이전트</div>
+          <div class="stat-detail">Planner, Executor, Reviewer, Research, Creative</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value gradient">3</div>
+          <div class="stat-label">메모리 계층</div>
+          <div class="stat-detail">Working, Episodic, Semantic Memory</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value gradient">20+</div>
+          <div class="stat-label">기본 스킬</div>
+          <div class="stat-detail">문서, 이메일, 데이터, 번역 등</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value gradient">&infin;</div>
+          <div class="stat-label">확장 가능</div>
+          <div class="stat-detail">커뮤니티 Skill Store</div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">03 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 4: ARCHITECTURE
+       ============================ -->
+  <section class="slide" id="slide-4">
+    <div class="slide-inner">
+      <div class="section-label">Architecture</div>
+      <h2 class="slide-title">시스템 아키텍처</h2>
+
+      <div class="arch-visual">
+        <div class="arch-row">
+          <div class="arch-box arch-user">Chat UI</div>
+          <div class="arch-box arch-user">Skill Store</div>
+          <div class="arch-box arch-user">Skill Editor</div>
+          <div class="arch-box arch-user">Dashboard</div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box arch-orch" style="flex: 3;">
+            Orchestrator &mdash; Intent Analysis &rarr; Agent Dispatch &rarr; Result Merge
+          </div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box arch-agent">Planner</div>
+          <div class="arch-box arch-agent">Executor</div>
+          <div class="arch-box arch-agent">Reviewer</div>
+          <div class="arch-box arch-agent">Research</div>
+          <div class="arch-box arch-agent">Creative</div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box arch-skill" style="flex: 3;">
+            Skill Engine &mdash; Registry &bull; Dynamic Loader &bull; Sandbox Runtime
+          </div>
+        </div>
+        <div class="arch-arrow">&darr;</div>
+        <div class="arch-row">
+          <div class="arch-box arch-mem">Working Memory<br><small>Session / Redis</small></div>
+          <div class="arch-box arch-mem">Episodic Memory<br><small>History / PostgreSQL</small></div>
+          <div class="arch-box arch-mem">Semantic Memory<br><small>Knowledge / Vector DB</small></div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">04 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 5: AGENTIC LOOP
+       ============================ -->
+  <section class="slide" id="slide-5">
+    <div class="slide-inner">
+      <div class="section-label">Core Innovation</div>
+      <h2 class="slide-title">Agentic Loop:<br><span class="gradient-text">자율 품질 보장</span> 메커니즘</h2>
+      <p class="slide-subtitle">AI가 스스로 계획하고, 실행하고, 검증하는 반복 루프를 통해 사람의 검수 없이 95%+ 정확도를 달성합니다.</p>
+
+      <div class="loop-visual" style="margin-top: 32px;">
+        <div class="loop-step">User Input</div>
+        <span class="loop-arrow">&rarr;</span>
+        <div class="loop-step highlighted">Plan<br><small style="color:var(--text-muted);">Planner Agent</small></div>
+        <span class="loop-arrow">&rarr;</span>
+        <div class="loop-step highlighted">Execute<br><small style="color:var(--text-muted);">Executor + Skills</small></div>
+        <span class="loop-arrow">&rarr;</span>
+        <div class="loop-step highlighted">Review<br><small style="color:var(--text-muted);">Reviewer Agent</small></div>
+        <span class="loop-arrow">&rarr;</span>
+        <div class="loop-branch">
+          <span class="loop-label loop-pass">PASS &rarr; Output</span>
+          <span class="loop-label loop-fail">FAIL &rarr; Re-plan</span>
+        </div>
+      </div>
+
+      <div class="grid-3" style="margin-top: 32px;">
+        <div class="card">
+          <h3 style="color:#c084fc;">Plan (계획)</h3>
+          <p>복잡한 요청을 하위 작업으로 분해하고 최적의 에이전트+스킬 조합을 결정합니다.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:#22d3ee;">Execute (실행)</h3>
+          <p>병렬 처리가 가능한 작업은 동시에 실행하여 속도를 극대화합니다.</p>
+        </div>
+        <div class="card">
+          <h3 style="color:#4ade80;">Review (검증)</h3>
+          <p>결과물의 정확성, 완성도, 톤을 자동 검증하고 미달 시 재실행합니다.</p>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">05 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 6: SKILLS ECOSYSTEM
+       ============================ -->
+  <section class="slide" id="slide-6">
+    <div class="slide-inner">
+      <div class="section-label">Skill Platform</div>
+      <h2 class="slide-title">AI 능력의 <span class="gradient-text">앱스토어</span></h2>
+      <p class="slide-subtitle">필요한 기능을 골라 설치하고, 나만의 스킬을 만들어 공유하세요.</p>
+
+      <div class="grid-2" style="margin-top: 32px;">
+        <div>
+          <h3 style="font-size:18px; margin-bottom:16px;">8개 카테고리, 20+ 기본 스킬</h3>
+          <table class="compare-table">
+            <thead>
+              <tr><th>Category</th><th>Skills</th><th>대표 기능</th></tr>
+            </thead>
+            <tbody>
+              <tr><td>&#128196; Document</td><td>4</td><td>보고서, 회의록, 계약서, SOP</td></tr>
+              <tr><td>&#9993; Email</td><td>2</td><td>이메일 작성, 스레드 요약</td></tr>
+              <tr><td>&#128200; Data</td><td>1</td><td>엑셀 분석, 인사이트 도출</td></tr>
+              <tr><td>&#128197; Schedule</td><td>1</td><td>일정 최적화, 충돌 감지</td></tr>
+              <tr><td>&#127916; Presentation</td><td>2</td><td>슬라이드 구조, 발표 스크립트</td></tr>
+              <tr><td>&#128100; HR</td><td>1</td><td>채용공고 작성</td></tr>
+              <tr><td>&#127760; Translation</td><td>2</td><td>비즈니스 번역, 교정</td></tr>
+              <tr><td>&#9881; Automation</td><td>1</td><td>정기 보고서 자동화</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div>
+          <h3 style="font-size:18px; margin-bottom:16px;">Skill Store 핵심 기능</h3>
+          <div class="card" style="margin-bottom:12px;">
+            <h3>&#128270; Browse & Install</h3>
+            <p>카테고리, 검색, 평점순으로 스킬을 탐색하고 원클릭 설치</p>
+          </div>
+          <div class="card" style="margin-bottom:12px;">
+            <h3>&#9997; Visual Editor</h3>
+            <p>코딩 없이 4탭 편집기로 스킬을 제작. 실시간 미리보기 지원</p>
+          </div>
+          <div class="card" style="margin-bottom:12px;">
+            <h3>&#9989; Auto Validator</h3>
+            <p>11개 항목 자동 검증으로 품질 보장 후 게시</p>
+          </div>
+          <div class="card">
+            <h3>&#128260; Fork & Share</h3>
+            <p>다른 사람의 스킬을 복제하여 커스터마이징 후 재공유</p>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">06 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 7: COMPARISON
+       ============================ -->
+  <section class="slide" id="slide-7">
+    <div class="slide-inner">
+      <div class="section-label">Competitive Edge</div>
+      <h2 class="slide-title">기존 AI 도구 vs <span class="gradient-text">SkillForge</span></h2>
+
+      <table class="compare-table">
+        <thead>
+          <tr>
+            <th>비교 항목</th>
+            <th>기존 AI 챗봇 <span class="badge-old">현재</span></th>
+            <th>SkillForge <span class="badge-new">제안</span></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>처리 방식</td>
+            <td>1명의 AI가 순차 처리</td>
+            <td><strong>전문 AI 5명이 역할 분담 + 병렬 처리</strong></td>
+          </tr>
+          <tr>
+            <td>품질 보장</td>
+            <td>사람이 매번 검수</td>
+            <td><strong>Agentic Loop 자동 검증 (95%+ 정확도)</strong></td>
+          </tr>
+          <tr>
+            <td>기억력</td>
+            <td>대화 끝나면 모든 맥락 소실</td>
+            <td><strong>3계층 메모리로 사용자 패턴 학습</strong></td>
+          </tr>
+          <tr>
+            <td>확장성</td>
+            <td>기능 고정, 개발팀만 수정 가능</td>
+            <td><strong>Skill Store로 누구나 무한 확장</strong></td>
+          </tr>
+          <tr>
+            <td>재사용성</td>
+            <td>좋은 프롬프트도 1회성</td>
+            <td><strong>스킬로 패키징하여 팀/조직 공유</strong></td>
+          </tr>
+          <tr>
+            <td>복잡한 업무</td>
+            <td>여러 번 수동 분할 요청</td>
+            <td><strong>자동 분해 &rarr; 병렬 실행 &rarr; 통합 출력</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="slide-num">07 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 8: USE CASE
+       ============================ -->
+  <section class="slide" id="slide-8">
+    <div class="slide-inner">
+      <div class="section-label">Use Case</div>
+      <h2 class="slide-title">실전 시나리오</h2>
+
+      <div class="grid-2" style="margin-top: 24px;">
+        <div class="scenario-box">
+          <div class="scenario-title">"지난달 매출 데이터로 임원보고 PPT 만들어줘"</div>
+          <div class="scenario-steps">
+            <div class="scenario-step">
+              <span class="step-num step-purple">1</span>
+              <span class="step-agent">Orchestrator</span>
+              <span>의도 분석 &rarr; 3단계 작업 계획 수립</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-cyan">2</span>
+              <span class="step-agent">Research</span>
+              <span>excel-analyzer로 매출 데이터 분석</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-cyan">3</span>
+              <span class="step-agent">Creative</span>
+              <span>slide-outliner로 PPT 구조 설계</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-green">4</span>
+              <span class="step-agent">Reviewer</span>
+              <span>수치 정확성 검증 + 표현 교정</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-orange">5</span>
+              <span class="step-agent">Merger</span>
+              <span>보고서 + 발표 스크립트 통합 출력</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="scenario-box">
+          <div class="scenario-title">"거래처에 납기 지연 사과 메일 보내줘"</div>
+          <div class="scenario-steps">
+            <div class="scenario-step">
+              <span class="step-num step-purple">1</span>
+              <span class="step-agent">Orchestrator</span>
+              <span>의도: 이메일 작성 (사과/공식)</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-cyan">2</span>
+              <span class="step-agent">Research</span>
+              <span>과거 이메일 패턴 참조 (Episodic Memory)</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-cyan">3</span>
+              <span class="step-agent">Executor</span>
+              <span>email-composer (tone: apologetic)</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-green">4</span>
+              <span class="step-agent">Reviewer</span>
+              <span>톤/예의 검증 &rarr; PASS</span>
+            </div>
+            <div class="scenario-step">
+              <span class="step-num step-orange">5</span>
+              <span class="step-agent">Output</span>
+              <span>제목 + 본문 + 첨부 파일 제안</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">08 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 9: MEMORY & PERSONALIZATION
+       ============================ -->
+  <section class="slide" id="slide-9">
+    <div class="slide-inner">
+      <div class="section-label">Intelligence</div>
+      <h2 class="slide-title">3계층 메모리:<br><span class="gradient-text">쓸수록 똑똑해지는</span> AI</h2>
+
+      <div class="grid-3" style="margin-top: 32px;">
+        <div class="card" style="border-top: 3px solid #6366f1;">
+          <h3 style="color: #818cf8;">Working Memory</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">SESSION &bull; Redis</p>
+          <p>현재 대화의 맥락과 실행 중인 에이전트 상태를 실시간으로 관리합니다.</p>
+          <ul style="margin-top:12px; padding-left:16px; font-size:13px; color:var(--text-dim);">
+            <li>대화 메시지 버퍼</li>
+            <li>활성 에이전트 상태</li>
+            <li>스킬 실행 스택</li>
+            <li>토큰 예산 관리</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid #a855f7;">
+          <h3 style="color: #c084fc;">Episodic Memory</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">PERSISTENT &bull; PostgreSQL</p>
+          <p>과거 대화 이력과 작업 패턴을 저장하여 반복 학습합니다.</p>
+          <ul style="margin-top:12px; padding-left:16px; font-size:13px; color:var(--text-dim);">
+            <li>세션 요약 로그</li>
+            <li>작업 성공/실패 이력</li>
+            <li>스킬 사용 통계</li>
+            <li>자주 하는 업무 패턴</li>
+          </ul>
+        </div>
+        <div class="card" style="border-top: 3px solid #06b6d4;">
+          <h3 style="color: #22d3ee;">Semantic Memory</h3>
+          <p style="font-size:12px; color:var(--text-muted); margin-bottom:12px;">PERMANENT &bull; Vector DB</p>
+          <p>장기적인 지식과 사용자 선호를 영구 저장하여 개인화합니다.</p>
+          <ul style="margin-top:12px; padding-left:16px; font-size:13px; color:var(--text-dim);">
+            <li>사용자 스타일/선호</li>
+            <li>도메인 전문 지식</li>
+            <li>조직 템플릿</li>
+            <li>RAG 기반 검색</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="callout" style="background:rgba(99,102,241,0.06); border-left:4px solid var(--accent); margin-top:24px; padding:16px 20px; border-radius:0 12px 12px 0;">
+        <p style="font-size:14px; color:var(--text-dim); margin:0;">
+          <strong style="color:var(--text);">&#128161; 사용 예시:</strong>
+          "지난번처럼 해줘" &rarr; Episodic Memory에서 이전 작업 패턴을 검색하여 동일한 스타일로 자동 적용
+        </p>
+      </div>
+    </div>
+    <div class="slide-num">09 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 10: ROI & IMPACT
+       ============================ -->
+  <section class="slide" id="slide-10">
+    <div class="slide-inner">
+      <div class="section-label">Business Impact</div>
+      <h2 class="slide-title">기대 효과</h2>
+
+      <div class="grid-4" style="margin-top: 32px;">
+        <div class="roi-highlight">
+          <div class="roi-value">40%+</div>
+          <div class="roi-label">복잡 업무 처리<br>정확도 향상</div>
+        </div>
+        <div class="roi-highlight">
+          <div class="roi-value">50%</div>
+          <div class="roi-label">반복 업무<br>시간 절감</div>
+        </div>
+        <div class="roi-highlight">
+          <div class="roi-value">95%</div>
+          <div class="roi-label">자동 검증<br>정확도</div>
+        </div>
+        <div class="roi-highlight">
+          <div class="roi-value">10분</div>
+          <div class="roi-label">평균 스킬<br>제작 시간</div>
+        </div>
+      </div>
+
+      <div class="grid-2" style="margin-top: 24px;">
+        <div class="card">
+          <h3>&#128176; 비용 절감</h3>
+          <ul style="margin-top:12px; padding-left:16px; font-size:14px; color:var(--text-dim); list-style:none;">
+            <li style="padding:4px 0;">&#10003; 문서 작성 시간 60% 단축 (보고서, 이메일, 회의록)</li>
+            <li style="padding:4px 0;">&#10003; AI 검수로 사람 검토 시간 80% 감소</li>
+            <li style="padding:4px 0;">&#10003; 프롬프트 재사용으로 1인당 월 10시간+ 절약</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>&#128640; 경쟁력 강화</h3>
+          <ul style="margin-top:12px; padding-left:16px; font-size:14px; color:var(--text-dim); list-style:none;">
+            <li style="padding:4px 0;">&#10003; 현업 부서가 직접 AI 도구 제작 &rarr; IT 병목 해소</li>
+            <li style="padding:4px 0;">&#10003; 조직 내 AI 활용 노하우 축적 (Skill Store)</li>
+            <li style="padding:4px 0;">&#10003; 사용자별 AI 개인화로 만족도 향상</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">10 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 11: ROADMAP
+       ============================ -->
+  <section class="slide" id="slide-11">
+    <div class="slide-inner">
+      <div class="section-label">Timeline</div>
+      <h2 class="slide-title">Implementation Roadmap</h2>
+
+      <div class="timeline">
+        <div class="timeline-phase active">
+          <div class="timeline-dot"></div>
+          <div class="timeline-period">Phase 1 &bull; M1-M2</div>
+          <div class="timeline-title">Foundation</div>
+          <ul class="timeline-items">
+            <li>Core 3 Agents 개발</li>
+            <li>Skill Engine 구현</li>
+            <li>Working Memory</li>
+            <li>5개 기본 스킬</li>
+          </ul>
+        </div>
+        <div class="timeline-phase active">
+          <div class="timeline-dot"></div>
+          <div class="timeline-period">Phase 2 &bull; M3-M4</div>
+          <div class="timeline-title">Platform</div>
+          <ul class="timeline-items">
+            <li>5 Agent 완성</li>
+            <li>Skill Store 오픈</li>
+            <li>Visual Editor</li>
+            <li>3계층 메모리</li>
+          </ul>
+        </div>
+        <div class="timeline-phase">
+          <div class="timeline-dot"></div>
+          <div class="timeline-period">Phase 3 &bull; M5-M6</div>
+          <div class="timeline-title">Community</div>
+          <ul class="timeline-items">
+            <li>Fork & Share</li>
+            <li>Rating System</li>
+            <li>Analytics</li>
+            <li>100+ Skills 목표</li>
+          </ul>
+        </div>
+        <div class="timeline-phase future">
+          <div class="timeline-dot"></div>
+          <div class="timeline-period">Phase 4 &bull; M7+</div>
+          <div class="timeline-title">Scale</div>
+          <ul class="timeline-items">
+            <li>유료 마켓플레이스</li>
+            <li>Enterprise SSO</li>
+            <li>멀티 LLM 지원</li>
+            <li>모바일 앱</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+    <div class="slide-num">11 / 12</div>
+  </section>
+
+  <!-- ============================
+       SLIDE 12: CTA
+       ============================ -->
+  <section class="slide" id="slide-12">
+    <div class="slide-inner cta-content">
+      <div class="section-label">Next Steps</div>
+      <h2 class="mega-title" style="margin-bottom: 20px;">
+        AI의 미래,<br>
+        <span class="gradient-text">SkillForge</span>로<br>
+        시작합니다
+      </h2>
+      <p class="slide-subtitle" style="margin: 0 auto 16px; text-align:center;">
+        전문 에이전트 팀 &bull; 자율 품질 보장 &bull; 무한 확장 가능한 Skill 생태계
+      </p>
+
+      <div class="grid-3" style="margin-top: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
+        <div class="stat-card">
+          <div class="stat-value" style="font-size:28px; color:var(--accent);">Phase 1</div>
+          <div class="stat-label">Foundation</div>
+          <div class="stat-detail" style="margin-top:8px;">예산 승인 요청<br>M1~M2 착수</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="font-size:28px; color:var(--accent2);">Pilot</div>
+          <div class="stat-label">PoC 검증</div>
+          <div class="stat-detail" style="margin-top:8px;">1개 부서 파일럿<br>이메일+보고서 스킬</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value" style="font-size:28px; color:var(--accent3);">Scale</div>
+          <div class="stat-label">전사 확대</div>
+          <div class="stat-detail" style="margin-top:8px;">성과 기반<br>단계적 확산</div>
+        </div>
+      </div>
+
+      <div class="cta-actions">
+        <a href="../index.html" class="cta-btn cta-btn-primary">
+          &#128640;&nbsp; Skill Store Demo
+        </a>
+        <a href="design-document.html" class="cta-btn cta-btn-secondary">
+          &#128196;&nbsp; Technical Document
+        </a>
+      </div>
+
+      <p style="margin-top:32px; font-size:13px; color:var(--text-muted);">
+        Architecture Team &bull; 2026.02.21 &bull; Confidential
+      </p>
+    </div>
+    <div class="slide-num">12 / 12</div>
+  </section>
+
+  <script>
+    // ===========================
+    // Slide Navigation
+    // ===========================
+    const slides = document.querySelectorAll('.slide');
+    const totalSlides = slides.length;
+    const navContainer = document.getElementById('slideNav');
+    const progressBar = document.getElementById('progressBar');
+
+    // Create nav dots
+    slides.forEach((_, i) => {
+      const dot = document.createElement('button');
+      dot.className = 'slide-nav-dot' + (i === 0 ? ' active' : '');
+      dot.onclick = () => slides[i].scrollIntoView({ behavior: 'smooth' });
+      navContainer.appendChild(dot);
+    });
+
+    const dots = document.querySelectorAll('.slide-nav-dot');
+
+    // Track active slide
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          const idx = [...slides].indexOf(entry.target);
+          dots.forEach((d, i) => d.classList.toggle('active', i === idx));
+          progressBar.style.width = `${((idx + 1) / totalSlides) * 100}%`;
+        }
+      });
+    }, { threshold: 0.5 });
+
+    slides.forEach(slide => observer.observe(slide));
+
+    // Keyboard navigation
+    document.addEventListener('keydown', (e) => {
+      const currentIdx = [...dots].findIndex(d => d.classList.contains('active'));
+      if ((e.key === 'ArrowDown' || e.key === 'ArrowRight' || e.key === ' ') && currentIdx < totalSlides - 1) {
+        e.preventDefault();
+        slides[currentIdx + 1].scrollIntoView({ behavior: 'smooth' });
+      }
+      if ((e.key === 'ArrowUp' || e.key === 'ArrowLeft') && currentIdx > 0) {
+        e.preventDefault();
+        slides[currentIdx - 1].scrollIntoView({ behavior: 'smooth' });
+      }
+    });
+  </script>
+</body>
+</html>
