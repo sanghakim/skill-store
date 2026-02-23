@@ -8,12 +8,15 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Callable, Awaitable
 
 from skillforge.agents.base import BaseAgent
 from skillforge.models import AgentRole, ExecutionPlan, SubTask, TaskStatus
 
 logger = logging.getLogger(__name__)
+
+# Type alias for the event callback
+EventCallback = Callable[[dict[str, Any]], Awaitable[None]] | None
 
 
 class AgentDispatcher:
@@ -23,10 +26,19 @@ class AgentDispatcher:
         self.agents = agents
         self.max_parallel = max_parallel
 
+    async def _emit(self, callback: EventCallback, event: dict[str, Any]) -> None:
+        """Safely emit an event via the callback, if provided."""
+        if callback:
+            try:
+                await callback(event)
+            except Exception as exc:
+                logger.warning("Event callback error: %s", exc)
+
     async def execute_plan(
         self,
         plan: ExecutionPlan,
         session_id: str,
+        event_callback: EventCallback = None,
     ) -> dict[str, Any]:
         """
         Execute all tasks in the plan respecting dependency order.
@@ -69,6 +81,17 @@ class AgentDispatcher:
                 ", ".join(f"{t.agent_role.value}:{t.skill_id or 'no-skill'}" for t in batch),
             )
 
+            # Emit task_started events for each task in the batch
+            for task in batch:
+                await self._emit(event_callback, {
+                    "type": "task_started",
+                    "task_id": task.task_id,
+                    "agent": task.agent_role.value,
+                    "skill_id": task.skill_id,
+                    "description": task.description,
+                    "priority": task.priority,
+                })
+
             # Execute batch in parallel
             coros = [
                 self._execute_task(task, session_id, results)
@@ -82,10 +105,29 @@ class AgentDispatcher:
                     task.status = TaskStatus.FAILED
                     results[task.task_id] = {"success": False, "error": str(result)}
                     logger.error("Task %s failed with exception: %s", task.task_id, result)
+
+                    await self._emit(event_callback, {
+                        "type": "task_failed",
+                        "task_id": task.task_id,
+                        "agent": task.agent_role.value,
+                        "skill_id": task.skill_id,
+                        "error": str(result),
+                    })
                 else:
                     results[task.task_id] = result
                     task.status = TaskStatus.COMPLETED if result.get("success") else TaskStatus.FAILED
                     total_tokens += result.get("tokens_used", 0)
+
+                    await self._emit(event_callback, {
+                        "type": "task_completed" if result.get("success") else "task_failed",
+                        "task_id": task.task_id,
+                        "agent": task.agent_role.value,
+                        "skill_id": task.skill_id,
+                        "success": result.get("success", False),
+                        "tokens_used": result.get("tokens_used", 0),
+                        "execution_time_ms": result.get("execution_time_ms", 0),
+                        "output_preview": str(result.get("outputs", {}))[:300],
+                    })
 
                 completed_ids.add(task.task_id)
                 remaining.pop(task.task_id, None)

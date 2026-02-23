@@ -1,14 +1,17 @@
 """
 FastAPI Server - REST API + WebSocket for the SkillForge platform.
+Serves the workspace frontend and provides real-time agent event streaming.
 """
 
 from __future__ import annotations
 
 import logging
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from skillforge.app import SkillForgeApp
@@ -159,6 +162,24 @@ async def get_messages(session_id: str, last_n: int | None = None):
     }
 
 
+@api.get("/api/v1/sessions")
+async def list_sessions(user_id: str = "default"):
+    """List all active sessions."""
+    sf = get_app()
+    sessions = sf.memory.working.list_sessions()
+    session_list = []
+    for sid, state in sessions.items():
+        if state.user_id == user_id or user_id == "default":
+            session_list.append({
+                "session_id": sid,
+                "user_id": state.user_id,
+                "message_count": len(state.messages),
+                "preview": state.messages[-1].content[:100] if state.messages else "",
+                "created_at": state.messages[0].timestamp.isoformat() if state.messages else None,
+            })
+    return {"sessions": session_list, "count": len(session_list)}
+
+
 # ═══════════════════════════════════════
 # Skill Store Endpoints
 # ═══════════════════════════════════════
@@ -301,13 +322,33 @@ async def health():
     return {"status": "healthy", "version": "1.0.0"}
 
 
+@api.get("/api/v1/system/info")
+async def system_info():
+    """Get system information for the workspace UI."""
+    sf = get_app()
+    info = sf.get_system_info()
+    return info
+
+
 # ═══════════════════════════════════════
-# WebSocket - Real-time Chat
+# WebSocket - Real-time Chat with Event Streaming
 # ═══════════════════════════════════════
 
 @api.websocket("/ws/chat")
 async def ws_chat(websocket: WebSocket):
-    """WebSocket endpoint for real-time chat."""
+    """
+    WebSocket endpoint for real-time chat with agent event streaming.
+
+    Client sends:
+        {"type": "message", "message": "...", "session_id": "..."}
+        {"type": "create_session", "user_id": "..."}
+        {"type": "ping"}
+
+    Server sends events in chronological order during execution:
+        session_created, processing_started, intent_analyzed, plan_created,
+        task_started, task_completed/task_failed, review_completed,
+        iteration_complete, replanning, response, processing_complete, error
+    """
     await websocket.accept()
     sf = get_app()
     session_id = sf.memory.start_session()
@@ -320,32 +361,73 @@ async def ws_chat(websocket: WebSocket):
     try:
         while True:
             data = await websocket.receive_json()
-            message = data.get("message", "")
+            msg_type = data.get("type", "message")
 
+            # Handle ping/pong for keepalive
+            if msg_type == "ping":
+                await websocket.send_json({"type": "pong"})
+                continue
+
+            # Handle session creation
+            if msg_type == "create_session":
+                user_id = data.get("user_id", "default")
+                session_id = sf.memory.start_session(user_id)
+                await websocket.send_json({
+                    "type": "session_created",
+                    "session_id": session_id,
+                })
+                continue
+
+            # Handle session switching
+            if msg_type == "switch_session":
+                new_session_id = data.get("session_id")
+                if new_session_id:
+                    session_id = new_session_id
+                    await websocket.send_json({
+                        "type": "session_switched",
+                        "session_id": session_id,
+                    })
+                continue
+
+            # Handle chat message
+            message = data.get("message", "")
             if not message:
                 continue
 
-            # Send processing status
-            await websocket.send_json({
-                "type": "processing",
-                "message": "Analyzing intent...",
-            })
+            # Use session_id from message if provided
+            if data.get("session_id"):
+                session_id = data["session_id"]
 
-            # Run the agentic loop
+            # Create the event emitter callback for real-time streaming
+            async def emit_event(event: dict):
+                await websocket.send_json(event)
+
+            # Run the agentic loop with event streaming
             result = await sf.loop.run(
                 user_input=message,
                 session_id=session_id,
                 user_id=data.get("user_id", "default"),
+                event_callback=emit_event,
             )
 
-            # Send result
+            # Build plan summary
+            plan_summary = None
+            if result.plan:
+                plan_summary = " → ".join(
+                    f"{t.agent_role.value}:{t.skill_id or 'task'}"
+                    for t in result.plan.tasks
+                )
+
+            # Send final response
             await websocket.send_json({
                 "type": "response",
                 "session_id": session_id,
                 "response": result.final_output,
+                "plan_summary": plan_summary,
                 "iterations": result.iterations,
                 "total_tokens": result.total_tokens,
                 "total_time_ms": result.total_time_ms,
+                "quality_score": result.quality_review.overall_score if result.quality_review else None,
                 "success": result.success,
                 "error": result.error,
             })
@@ -353,3 +435,14 @@ async def ws_chat(websocket: WebSocket):
     except WebSocketDisconnect:
         sf.memory.end_session(session_id)
         logger.info("WebSocket disconnected: %s", session_id)
+
+
+# ═══════════════════════════════════════
+# Static File Serving (Frontend)
+# ═══════════════════════════════════════
+
+# Serve frontend files from the project root directory
+# This must be the LAST route to avoid catching API routes
+_frontend_dir = Path(__file__).resolve().parent.parent.parent.parent
+if (_frontend_dir / "workspace.html").exists():
+    api.mount("/", StaticFiles(directory=str(_frontend_dir), html=True), name="frontend")

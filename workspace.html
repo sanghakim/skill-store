@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SkillForge Workspace - AI Multi-Agent System</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="workspace.css">
+</head>
+<body>
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Navigation Bar                          -->
+    <!-- ═══════════════════════════════════════ -->
+    <nav class="nav-bar">
+        <div class="nav-left">
+            <button class="sidebar-toggle" onclick="toggleSidebar()" title="스킬 브라우저">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <line x1="3" y1="6" x2="21" y2="6"></line>
+                    <line x1="3" y1="12" x2="21" y2="12"></line>
+                    <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+            </button>
+            <a href="workspace.html" class="nav-brand">
+                <span class="brand-icon">&#9881;</span>
+                <span class="brand-text">SkillForge</span>
+                <span class="brand-badge">Workspace</span>
+            </a>
+        </div>
+        <div class="nav-center">
+            <a href="workspace.html" class="nav-link active">Workspace</a>
+            <a href="index.html" class="nav-link">Store</a>
+        </div>
+        <div class="nav-right">
+            <div class="connection-status" id="connectionStatus">
+                <span class="status-dot disconnected"></span>
+                <span class="status-text">연결 대기</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Main Layout: Sidebar + Chat + Workspace -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="workspace-layout" id="workspaceLayout">
+
+        <!-- ──────────────────────── -->
+        <!-- Skill Sidebar            -->
+        <!-- ──────────────────────── -->
+        <aside class="skill-sidebar" id="skillSidebar">
+            <div class="sidebar-header">
+                <h3>스킬 브라우저</h3>
+                <input type="text" class="sidebar-search" placeholder="스킬 검색..." oninput="filterSkills(this.value)">
+            </div>
+            <div class="sidebar-categories" id="sidebarCategories">
+                <!-- Categories rendered by JS -->
+            </div>
+            <div class="sidebar-skills" id="sidebarSkills">
+                <!-- Skills rendered by JS -->
+            </div>
+        </aside>
+
+        <!-- ──────────────────────── -->
+        <!-- Chat Panel (Left)        -->
+        <!-- ──────────────────────── -->
+        <main class="chat-panel">
+            <!-- Session Bar -->
+            <div class="session-bar">
+                <select class="session-select" id="sessionSelect" onchange="switchSession(this.value)">
+                    <option value="">현재 세션</option>
+                </select>
+                <button class="btn-ghost btn-sm" onclick="createNewSession()">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <line x1="12" y1="5" x2="12" y2="19"></line>
+                        <line x1="5" y1="12" x2="19" y2="12"></line>
+                    </svg>
+                    새 세션
+                </button>
+            </div>
+
+            <!-- Chat Messages -->
+            <div class="chat-messages" id="chatMessages">
+                <!-- Welcome Message -->
+                <div class="welcome-message" id="welcomeMessage">
+                    <div class="welcome-icon">&#9881;</div>
+                    <h2>SkillForge Workspace</h2>
+                    <p>AI 멀티 에이전트 시스템이 준비되었습니다.<br>무엇을 도와드릴까요?</p>
+                    <div class="welcome-suggestions">
+                        <button class="suggestion-chip" onclick="sendSuggestion('비즈니스 이메일을 작성해줘')">비즈니스 이메일 작성</button>
+                        <button class="suggestion-chip" onclick="sendSuggestion('프로젝트 보고서 초안을 만들어줘')">보고서 초안 생성</button>
+                        <button class="suggestion-chip" onclick="sendSuggestion('AI 트렌드에 대해 심층 분석해줘')">심층 리서치</button>
+                        <button class="suggestion-chip" onclick="sendSuggestion('팀 회의 안건을 정리해줘')">회의록 정리</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator -->
+            <div class="typing-indicator" id="typingIndicator" style="display: none;">
+                <div class="typing-dots">
+                    <span></span><span></span><span></span>
+                </div>
+                <span class="typing-text" id="typingText">에이전트가 작업 중...</span>
+            </div>
+
+            <!-- Chat Input -->
+            <div class="chat-input-area">
+                <div class="input-wrapper">
+                    <textarea
+                        id="chatInput"
+                        class="chat-input"
+                        placeholder="무엇을 도와드릴까요? (예: 이메일 작성, 보고서 생성, 심층 리서치...)"
+                        rows="1"
+                        onkeydown="handleInputKeydown(event)"
+                        oninput="autoResizeInput(this)"
+                    ></textarea>
+                    <button class="send-btn" id="sendBtn" onclick="sendMessage()" disabled>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
+                <div class="input-footer">
+                    <span class="char-count" id="charCount">0</span>
+                    <span class="input-hint">Enter 전송 / Shift+Enter 줄바꿈</span>
+                </div>
+            </div>
+        </main>
+
+        <!-- ──────────────────────── -->
+        <!-- Workspace Panel (Right)  -->
+        <!-- ──────────────────────── -->
+        <aside class="workspace-panel" id="workspacePanel">
+            <!-- Workspace Tabs -->
+            <div class="workspace-tabs">
+                <button class="ws-tab active" data-tab="activity" onclick="switchWorkspaceTab('activity')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                    </svg>
+                    활동
+                </button>
+                <button class="ws-tab" data-tab="tasks" onclick="switchWorkspaceTab('tasks')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                    </svg>
+                    작업
+                </button>
+                <button class="ws-tab" data-tab="plan" onclick="switchWorkspaceTab('plan')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10"></circle>
+                        <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    계획
+                </button>
+            </div>
+
+            <!-- Activity View -->
+            <div class="ws-content active" id="activityView">
+                <div class="activity-stream" id="activityStream">
+                    <div class="activity-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                            <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline>
+                        </svg>
+                        <p>메시지를 보내면 에이전트 활동이<br>실시간으로 표시됩니다</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tasks View -->
+            <div class="ws-content" id="tasksView">
+                <div class="tasks-container" id="tasksContainer">
+                    <div class="activity-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        </svg>
+                        <p>실행 계획이 생성되면<br>작업 흐름이 표시됩니다</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Plan View -->
+            <div class="ws-content" id="planView">
+                <div class="plan-container" id="planContainer">
+                    <div class="activity-empty">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" opacity="0.3">
+                            <circle cx="12" cy="12" r="10"></circle>
+                            <polyline points="12 6 12 12 16 14"></polyline>
+                        </svg>
+                        <p>품질 리뷰 결과와<br>실행 계획이 표시됩니다</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- ═══════════════════════════════════════ -->
+    <!-- Toast Container                         -->
+    <!-- ═══════════════════════════════════════ -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="workspace.js"></script>
+</body>
+</html>

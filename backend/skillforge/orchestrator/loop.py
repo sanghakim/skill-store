@@ -16,7 +16,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
-from typing import Any
+from typing import Any, Callable, Awaitable
 
 from skillforge.agents.base import BaseAgent
 from skillforge.agents.planner import PlannerAgent
@@ -37,6 +37,9 @@ from skillforge.orchestrator.dispatcher import AgentDispatcher
 from skillforge.orchestrator.result_merger import ResultMerger
 
 logger = logging.getLogger(__name__)
+
+# Type alias for the event callback
+EventCallback = Callable[[dict[str, Any]], Awaitable[None]] | None
 
 
 class AgenticLoop:
@@ -84,14 +87,30 @@ class AgenticLoop:
             max_iterations, quality_threshold, timeout_ms,
         )
 
+    async def _emit(self, callback: EventCallback, event: dict[str, Any]) -> None:
+        """Safely emit an event via the callback, if provided."""
+        if callback:
+            try:
+                await callback(event)
+            except Exception as exc:
+                logger.warning("Event callback error: %s", exc)
+
     async def run(
         self,
         user_input: str,
         session_id: str | None = None,
         user_id: str = "default",
+        event_callback: EventCallback = None,
     ) -> OrchestrationResult:
         """
         Main entry point: process a user request through the full agentic loop.
+
+        Args:
+            user_input: The user's natural language request.
+            session_id: Optional session ID to reuse.
+            user_id: User identifier (default: "default").
+            event_callback: Optional async callback for real-time event streaming.
+                           Called with dict events at each lifecycle stage.
         """
         start_time = time.time()
 
@@ -104,17 +123,37 @@ class AgenticLoop:
 
         logger.info("=== AgenticLoop START === session=%s input=%s", session_id, user_input[:80])
 
+        await self._emit(event_callback, {
+            "type": "processing_started",
+            "session_id": session_id,
+            "message": user_input[:200],
+        })
+
         try:
             result = await asyncio.wait_for(
-                self._run_loop(user_input, session_id),
+                self._run_loop(user_input, session_id, event_callback),
                 timeout=self.timeout_ms / 1000,
             )
             result.session_id = session_id
             result.total_time_ms = int((time.time() - start_time) * 1000)
+
+            # Emit final response event
+            await self._emit(event_callback, {
+                "type": "processing_complete",
+                "session_id": session_id,
+                "success": result.success,
+                "total_time_ms": result.total_time_ms,
+            })
+
             return result
 
         except asyncio.TimeoutError:
             logger.error("AgenticLoop timed out after %dms", self.timeout_ms)
+            await self._emit(event_callback, {
+                "type": "error",
+                "error": f"Execution timed out after {self.timeout_ms}ms",
+                "code": "TIMEOUT",
+            })
             return OrchestrationResult(
                 session_id=session_id,
                 user_request=user_input,
@@ -124,6 +163,11 @@ class AgenticLoop:
             )
         except Exception as exc:
             logger.exception("AgenticLoop unexpected error")
+            await self._emit(event_callback, {
+                "type": "error",
+                "error": str(exc),
+                "code": "INTERNAL_ERROR",
+            })
             return OrchestrationResult(
                 session_id=session_id,
                 user_request=user_input,
@@ -136,6 +180,7 @@ class AgenticLoop:
         self,
         user_input: str,
         session_id: str,
+        event_callback: EventCallback = None,
     ) -> OrchestrationResult:
         """Inner loop with retry logic."""
 
@@ -145,6 +190,15 @@ class AgenticLoop:
             "Intent: %s (complexity=%s, confidence=%.2f)",
             intent.primary_intent, intent.complexity, intent.confidence,
         )
+
+        await self._emit(event_callback, {
+            "type": "intent_analyzed",
+            "intent": intent.primary_intent,
+            "complexity": intent.complexity,
+            "confidence": intent.confidence,
+            "suggested_agents": [a.value for a in intent.suggested_agents],
+            "language": intent.language,
+        })
 
         # ── Step 2: Plan Generation ──
         plan_result = await self.agents[AgentRole.PLANNER].run(
@@ -166,6 +220,24 @@ class AgenticLoop:
                 error="Empty execution plan",
             )
 
+        await self._emit(event_callback, {
+            "type": "plan_created",
+            "plan_id": plan.plan_id,
+            "iteration": plan.iteration,
+            "task_count": len(plan.tasks),
+            "tasks": [
+                {
+                    "task_id": t.task_id,
+                    "description": t.description,
+                    "agent_role": t.agent_role.value,
+                    "skill_id": t.skill_id,
+                    "dependencies": t.dependencies,
+                    "priority": t.priority,
+                }
+                for t in plan.tasks
+            ],
+        })
+
         # ── Step 3: Iterative Execute → Review Loop ──
         final_result: OrchestrationResult | None = None
         total_tokens = 0
@@ -173,8 +245,16 @@ class AgenticLoop:
         for iteration in range(1, self.max_iterations + 1):
             logger.info("=== Iteration %d/%d ===", iteration, self.max_iterations)
 
+            await self._emit(event_callback, {
+                "type": "iteration_start",
+                "iteration": iteration,
+                "max_iterations": self.max_iterations,
+            })
+
             # Execute plan
-            dispatch_result = await self.dispatcher.execute_plan(plan, session_id)
+            dispatch_result = await self.dispatcher.execute_plan(
+                plan, session_id, event_callback=event_callback,
+            )
             task_results = dispatch_result["task_results"]
             total_tokens += dispatch_result["total_tokens"]
 
@@ -196,6 +276,15 @@ class AgenticLoop:
                     "Review: score=%.2f passed=%s feedback=%s",
                     quality_score, passed, review.get("feedback", "")[:100],
                 )
+
+                await self._emit(event_callback, {
+                    "type": "review_completed",
+                    "iteration": iteration,
+                    "score": quality_score,
+                    "passed": passed,
+                    "feedback": review.get("feedback", ""),
+                    "aspects": review.get("items", []),
+                })
 
             if passed or iteration == self.max_iterations:
                 # Build final result
@@ -235,12 +324,27 @@ class AgenticLoop:
                     )
                     final_result.error = f"Quality threshold not met after {iteration} iterations (score={quality_score:.2f})"
 
+                await self._emit(event_callback, {
+                    "type": "iteration_complete",
+                    "iteration": iteration,
+                    "passed": passed,
+                    "quality_score": quality_score,
+                    "total_tokens": total_tokens,
+                })
+
                 break
 
             else:
                 # ── Re-plan for next iteration ──
                 logger.info("Re-planning for iteration %d...", iteration + 1)
                 feedback = review.get("feedback", "") if review else ""
+
+                await self._emit(event_callback, {
+                    "type": "replanning",
+                    "iteration": iteration + 1,
+                    "reason": feedback or "Quality threshold not met",
+                })
+
                 plan_result = await self.agents[AgentRole.PLANNER].run(
                     session_id,
                     f"{user_input}\n\n[Previous feedback]: {feedback}",
@@ -252,6 +356,24 @@ class AgenticLoop:
                     },
                 )
                 plan = plan_result.get("plan", plan)
+
+                await self._emit(event_callback, {
+                    "type": "plan_created",
+                    "plan_id": plan.plan_id,
+                    "iteration": plan.iteration,
+                    "task_count": len(plan.tasks),
+                    "tasks": [
+                        {
+                            "task_id": t.task_id,
+                            "description": t.description,
+                            "agent_role": t.agent_role.value,
+                            "skill_id": t.skill_id,
+                            "dependencies": t.dependencies,
+                            "priority": t.priority,
+                        }
+                        for t in plan.tasks
+                    ],
+                })
 
         logger.info(
             "=== AgenticLoop END === iterations=%d tokens=%d success=%s",
