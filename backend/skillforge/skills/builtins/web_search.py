@@ -116,7 +116,7 @@ class TavilySearchBackend:
         }
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 resp = client.post(self.API_URL, json=payload, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
@@ -182,7 +182,7 @@ class TavilySearchBackend:
         }
 
         try:
-            with httpx.Client(timeout=30.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 resp = client.post(self.API_URL, json=payload, headers=headers)
                 resp.raise_for_status()
                 data = resp.json()
@@ -230,7 +230,7 @@ class BraveSearchBackend:
         }
 
         try:
-            with httpx.Client(timeout=15.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 resp = client.get(self.API_URL, headers=headers, params=params)
                 resp.raise_for_status()
                 data = resp.json()
@@ -272,7 +272,7 @@ class GoogleSearchBackend:
         }
 
         try:
-            with httpx.Client(timeout=15.0) as client:
+            with httpx.Client(timeout=60.0) as client:
                 resp = client.get(self.API_URL, params=params)
                 resp.raise_for_status()
                 data = resp.json()
@@ -303,7 +303,7 @@ class FallbackSearchBackend:
     def search(self, query: str, count: int = 10, language: str = "ko") -> list[SearchResult]:
         """Execute a DuckDuckGo HTML search (no API key)."""
         try:
-            with httpx.Client(timeout=15.0, follow_redirects=True) as client:
+            with httpx.Client(timeout=60.0, follow_redirects=True) as client:
                 resp = client.post(
                     self.DDG_URL,
                     data={"q": query, "kl": f"{language}-{language}"},
@@ -443,7 +443,7 @@ class ContentExtractor:
         Strips HTML tags, scripts, styles, etc.
         """
         try:
-            with httpx.Client(timeout=10.0, follow_redirects=True) as client:
+            with httpx.Client(timeout=60.0, follow_redirects=True) as client:
                 resp = client.get(
                     url,
                     headers={"User-Agent": "Mozilla/5.0 (compatible; SkillForge/1.0)"},

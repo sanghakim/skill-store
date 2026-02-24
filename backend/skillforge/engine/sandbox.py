@@ -160,7 +160,7 @@ class SkillSandbox:
     def __init__(
         self,
         llm_backend: LLMBackend | None = None,
-        default_timeout_ms: int = 30_000,
+        default_timeout_ms: int = 120_000,
         max_retries: int = 3,
     ):
         self._llm = llm_backend or SimulatedLLMBackend()

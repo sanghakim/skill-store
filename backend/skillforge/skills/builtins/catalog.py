@@ -594,7 +594,7 @@ def _deep_researcher() -> SkillDefinition:
 2. 웹 검색: 다중 소스(Brave/Google/DuckDuckGo) 검색 실행
 3. 콘텐츠 추출: 상위 결과에서 핵심 내용 추출
 4. 종합 분석: 수집된 자료를 기반으로 심층 분석 보고서 작성""",
-        settings=SkillSettings(max_tokens=4000, temperature=0.5, timeout_ms=60000),
+        settings=SkillSettings(max_tokens=4000, temperature=0.5, timeout_ms=180000),
         permissions=["web_search"],
         tags=["리서치", "검색", "분석", "시장조사", "트렌드", "경쟁분석", "심층분석", "web search", "research"],
         rating=4.8,

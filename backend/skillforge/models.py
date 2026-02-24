@@ -88,7 +88,7 @@ class SkillSettings(BaseModel):
     max_tokens: int = 2000
     temperature: float = 0.7
     model: str = "default"
-    timeout_ms: int = 30000
+    timeout_ms: int = 120000
     requires_review: bool = True
 
 

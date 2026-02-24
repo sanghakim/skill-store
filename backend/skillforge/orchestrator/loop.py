@@ -8,7 +8,7 @@ Agentic Loop - The core execution cycle:
 Control parameters:
   - max_iterations: Maximum retry cycles (default: 3)
   - quality_threshold: Minimum score to pass (default: 0.75)
-  - timeout_ms: Global timeout (default: 60000)
+  - timeout_ms: Global timeout (default: 300000, 5 minutes)
 """
 
 from __future__ import annotations
@@ -54,7 +54,7 @@ class AgenticLoop:
         sandbox: SkillSandbox,
         max_iterations: int = 3,
         quality_threshold: float = 0.75,
-        timeout_ms: int = 60_000,
+        timeout_ms: int = 300_000,
         max_parallel: int = 5,
     ):
         self.memory = memory

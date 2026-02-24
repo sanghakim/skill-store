@@ -135,7 +135,7 @@ class SkillLoader:
             max_tokens=raw_settings.get("max_tokens", 2000),
             temperature=raw_settings.get("temperature", 0.7),
             model=raw_settings.get("model", "default"),
-            timeout_ms=raw_settings.get("timeout_ms", 30000),
+            timeout_ms=raw_settings.get("timeout_ms", 120000),
             requires_review=raw_settings.get("requires_review", True),
         )
 

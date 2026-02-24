@@ -54,11 +54,11 @@ class SkillForgeApp:
         token_limit: int = 128_000,
         # Sandbox settings
         llm_backend: LLMBackend | None = None,
-        sandbox_timeout_ms: int = 30_000,
+        sandbox_timeout_ms: int = 120_000,
         # Loop settings
         max_iterations: int = 3,
         quality_threshold: float = 0.75,
-        loop_timeout_ms: int = 60_000,
+        loop_timeout_ms: int = 300_000,
         max_parallel: int = 5,
         # Skill settings
         load_builtins: bool = True,
