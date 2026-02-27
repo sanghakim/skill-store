@@ -39,6 +39,7 @@ class AgentDispatcher:
         plan: ExecutionPlan,
         session_id: str,
         event_callback: EventCallback = None,
+        original_request: str = "",
     ) -> dict[str, Any]:
         """
         Execute all tasks in the plan respecting dependency order.
@@ -94,7 +95,7 @@ class AgentDispatcher:
 
             # Execute batch in parallel
             coros = [
-                self._execute_task(task, session_id, results)
+                self._execute_task(task, session_id, results, original_request=original_request)
                 for task in batch
             ]
             batch_results = await asyncio.gather(*coros, return_exceptions=True)
@@ -147,6 +148,7 @@ class AgentDispatcher:
         task: SubTask,
         session_id: str,
         previous_results: dict[str, dict[str, Any]],
+        original_request: str = "",
     ) -> dict[str, Any]:
         """Execute a single sub-task by routing to the appropriate agent."""
         agent = self.agents.get(task.agent_role)
@@ -174,8 +176,14 @@ class AgentDispatcher:
                 dep_result = previous_results.get(dep_id, {})
                 if dep_result.get("outputs"):
                     all_outputs.update(dep_result["outputs"])
+                # Also check for research content_enrichment / report
+                if dep_result.get("context_enrichment"):
+                    all_outputs["research_context"] = dep_result["context_enrichment"]
+                if dep_result.get("research_data", {}).get("deep_research", {}).get("report"):
+                    all_outputs["report"] = dep_result["research_data"]["deep_research"]["report"]
             context["outputs"] = all_outputs
-            context["original_request"] = task.description
+            # Use the original user request, not the reviewer's task description
+            context["original_request"] = original_request or task.description
 
         logger.info(
             "Executing task: %s (%s, skill=%s)",

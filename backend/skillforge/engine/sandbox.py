@@ -184,13 +184,20 @@ class SkillSandbox:
         start_time = time.time()
 
         try:
-            # Step 1: Validate inputs
-            self._validate_inputs(skill, request.inputs)
+            # Step 1: Validate inputs (only for legacy skills with defined inputs)
+            if skill.inputs:
+                self._validate_inputs(skill, request.inputs)
 
-            # Step 2: Resolve prompt template
-            resolved_prompt = self._resolve_template(
-                skill.prompt_template, request.inputs
-            )
+            # Step 2: Resolve prompt
+            from skillforge.models import SourceType
+            if skill.source_type == SourceType.SKILLMD:
+                resolved_prompt = self._resolve_skillmd_prompt(
+                    skill, request.inputs
+                )
+            else:
+                resolved_prompt = self._resolve_template(
+                    skill.prompt_template, request.inputs
+                )
 
             # Step 3: Inject extra context
             if extra_context:
@@ -252,6 +259,28 @@ class SkillSandbox:
             pattern = r"\{\{\s*" + re.escape(key) + r"\s*\}\}"
             resolved = re.sub(pattern, str(value), resolved)
         return resolved
+
+    def _resolve_skillmd_prompt(
+        self,
+        skill: SkillDefinition,
+        inputs: dict[str, Any],
+    ) -> str:
+        """Build a prompt for SKILL.md skills by combining instructions + user inputs."""
+        parts = [skill.instructions]
+
+        # Mention available scripts
+        if skill.scripts and skill.skill_dir:
+            parts.append("\n[Available Scripts]")
+            for script_path in skill.scripts:
+                parts.append(f"- {script_path}")
+
+        if inputs:
+            parts.append("\n---\n")
+            parts.append("[User Request]")
+            for key, value in inputs.items():
+                parts.append(f"{key}: {value}")
+
+        return "\n".join(parts)
 
     def _parse_output_sections(
         self, raw_output: str, output_fields: list

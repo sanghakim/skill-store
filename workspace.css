@@ -609,6 +609,115 @@ body {
     padding: 12px 16px 16px;
     border-top: 1px solid var(--border-subtle);
     background: var(--bg-secondary);
+    position: relative;
+}
+
+/* Drag & Drop Overlay */
+.chat-input-area.drag-over {
+    border-color: var(--accent);
+}
+.drag-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(99, 102, 241, 0.1);
+    border: 2px dashed var(--accent);
+    border-radius: var(--radius-md);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: var(--accent);
+    font-size: 13px;
+    font-weight: 500;
+    z-index: 10;
+    backdrop-filter: blur(4px);
+}
+
+/* Attachment Preview */
+.attachment-preview {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 8px 0;
+}
+.attachment-chip {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px 4px 8px;
+    background: var(--accent-dim);
+    border: 1px solid rgba(99, 102, 241, 0.25);
+    border-radius: var(--radius-full);
+    font-size: 12px;
+    color: var(--text-accent);
+    animation: fadeIn 200ms ease;
+}
+.attachment-chip .att-icon {
+    font-size: 14px;
+}
+.attachment-chip .att-name {
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+.attachment-chip .att-size {
+    color: var(--text-muted);
+    font-size: 10px;
+}
+.attachment-chip .att-remove {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 0 2px;
+    font-size: 14px;
+    line-height: 1;
+    transition: var(--transition-fast);
+}
+.attachment-chip .att-remove:hover {
+    color: var(--error);
+}
+
+/* Attach button */
+.attach-btn {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 6px;
+    border-radius: var(--radius-sm);
+    transition: var(--transition-fast);
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.attach-btn:hover {
+    color: var(--accent);
+    background: var(--accent-dim);
+}
+
+/* Message attachments display */
+.message-attachments {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 6px;
+}
+.msg-attachment {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    background: rgba(255,255,255,0.08);
+    border-radius: var(--radius-full);
+    font-size: 11px;
+    color: var(--text-secondary);
+}
+.msg-attachment .att-icon {
+    font-size: 12px;
 }
 .input-wrapper {
     display: flex;

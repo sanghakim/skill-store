@@ -125,23 +125,58 @@ class PlannerAgent(BaseAgent):
         }
 
     def _detect_skills(self, text: str) -> list[tuple[str, AgentRole]]:
-        """Detect required skills from the task description using keyword matching."""
+        """Detect required skills using keyword hints AND description matching."""
         detected = []
         text_lower = text.lower()
 
+        # 1. Keyword-based detection (primary, fast, deterministic)
         for keyword, skill_pairs in SKILL_HINTS.items():
             if keyword.lower() in text_lower:
                 for skill_id, agent in skill_pairs:
                     if (skill_id, agent) not in detected:
-                        # Verify skill exists in registry
                         if self.registry.exists(skill_id):
                             detected.append((skill_id, agent))
 
-        # Fallback: if nothing detected, use a generic creative task
+        # 2. Description-based activation for SKILL.md skills (fallback)
+        if not detected:
+            detected = self._match_by_description(text_lower)
+
+        # 3. Final fallback
         if not detected:
             detected.append((None, AgentRole.CREATIVE))
 
         return detected
+
+    def _match_by_description(
+        self, text_lower: str
+    ) -> list[tuple[str, AgentRole]]:
+        """Match user input against skill descriptions for activation.
+        Primarily useful for SKILL.md skills without keyword hints."""
+        from skillforge.models import SourceType
+
+        matches = []
+        words = set(text_lower.split())
+
+        for skill in self.registry.list_all():
+            desc_lower = skill.description.lower()
+            desc_words = set(desc_lower.split())
+
+            # Count overlapping significant words (>3 chars)
+            overlap = words & desc_words
+            significant = {w for w in overlap if len(w) > 3}
+
+            if len(significant) >= 2:
+                if skill.source_type == SourceType.SKILLMD:
+                    role = AgentRole.EXECUTOR
+                elif skill.category.value in ("data", "knowledge"):
+                    role = AgentRole.RESEARCH
+                else:
+                    role = AgentRole.CREATIVE
+
+                matches.append((skill.id, role, len(significant)))
+
+        matches.sort(key=lambda x: x[2], reverse=True)
+        return [(sid, role) for sid, role, _ in matches[:3]]
 
     def _build_tasks(
         self,

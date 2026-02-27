@@ -63,6 +63,7 @@ class SkillForgeApp:
         # Skill settings
         load_builtins: bool = True,
         custom_skills_dir: str | None = None,
+        skills_dir: str | None = None,
     ):
         self._config = {
             "episodic_persist_path": episodic_persist_path,
@@ -75,6 +76,7 @@ class SkillForgeApp:
             "max_parallel": max_parallel,
             "load_builtins": load_builtins,
             "custom_skills_dir": custom_skills_dir,
+            "skills_dir": skills_dir,
         }
 
         # Components (initialized in .initialize())
@@ -125,9 +127,13 @@ class SkillForgeApp:
         if self._config["load_builtins"]:
             self._register_builtin_skills()
 
-        # ── 5. Load Custom Skills ──
+        # ── 5. Load Custom Skills (YAML) ──
         if self._config["custom_skills_dir"]:
             self._load_custom_skills(self._config["custom_skills_dir"])
+
+        # ── 5b. Load Anthropic-format Skills (SKILL.md) ──
+        if self._config["skills_dir"]:
+            self._load_skillmd_skills(self._config["skills_dir"])
 
         # ── 6. Agentic Loop ──
         self.loop = AgenticLoop(
@@ -223,6 +229,35 @@ class SkillForgeApp:
 
         self.registry.register(skill)
         logger.info("Skill published from YAML: %s v%s", skill.id, skill.version)
+        return (True, skill, result)
+
+    def publish_skill_md(
+        self,
+        skill_dir: str,
+        validate: bool = True,
+    ) -> tuple[bool, SkillDefinition | None, SkillValidationResult | None]:
+        """Load, validate, and register a skill from a SKILL.md directory."""
+        try:
+            skill = SkillLoader.from_skill_directory(skill_dir)
+        except Exception as exc:
+            return (
+                False,
+                None,
+                SkillValidationResult(
+                    valid=False,
+                    errors=[f"SKILL.md loading error: {exc}"],
+                ),
+            )
+
+        if validate:
+            result = self.validate_skill(skill)
+            if not result.valid:
+                return (False, skill, result)
+        else:
+            result = None
+
+        self.registry.register(skill)
+        logger.info("SKILL.md skill published: %s", skill.id)
         return (True, skill, result)
 
     # ── System Info ──
@@ -337,6 +372,39 @@ class SkillForgeApp:
 
         except Exception as exc:
             logger.error("Failed to load custom skills from %s: %s", directory, exc)
+
+    def _load_skillmd_skills(self, directory: str) -> None:
+        """Load Anthropic-format skills from a directory of skill folders."""
+        dir_path = Path(directory)
+        if not dir_path.exists():
+            logger.warning("Skills directory not found: %s", directory)
+            return
+
+        try:
+            skills = SkillLoader.load_skills_directory(directory)
+            loaded = 0
+
+            for skill in skills:
+                validation = self.validate_skill(skill)
+                if validation.valid:
+                    self.registry.register(skill)
+                    loaded += 1
+                else:
+                    logger.warning(
+                        "SKILL.md skill validation failed: %s errors=%s warnings=%s",
+                        skill.id,
+                        validation.errors,
+                        validation.warnings,
+                    )
+
+            logger.info(
+                "Anthropic-format skills loaded: %d/%d from %s",
+                loaded, len(skills), directory,
+            )
+        except Exception as exc:
+            logger.error(
+                "Failed to load skills directory %s: %s", directory, exc
+            )
 
     def _seed_semantic_memory(self) -> None:
         """Pre-populate semantic memory with skill knowledge for RAG."""

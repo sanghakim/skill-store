@@ -254,6 +254,7 @@ class AgenticLoop:
             # Execute plan
             dispatch_result = await self.dispatcher.execute_plan(
                 plan, session_id, event_callback=event_callback,
+                original_request=user_input,
             )
             task_results = dispatch_result["task_results"]
             total_tokens += dispatch_result["total_tokens"]
@@ -347,7 +348,7 @@ class AgenticLoop:
 
                 plan_result = await self.agents[AgentRole.PLANNER].run(
                     session_id,
-                    f"{user_input}\n\n[Previous feedback]: {feedback}",
+                    user_input,
                     context={
                         "intent": intent.primary_intent,
                         "complexity": intent.complexity,

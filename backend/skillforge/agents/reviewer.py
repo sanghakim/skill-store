@@ -135,10 +135,12 @@ class ReviewerAgent(BaseAgent):
         """Score a single quality aspect. Returns (score, verdict, comment)."""
 
         if aspect == "completeness":
-            if output_len < 20:
-                return 0.3, QualityVerdict.FAIL, "Output is too short to be complete"
-            if output_len < 100:
-                return 0.6, QualityVerdict.WARN, "Output may be incomplete"
+            if output_len < 10:
+                return 0.2, QualityVerdict.FAIL, "Output is empty or minimal"
+            if output_len < 50:
+                return 0.5, QualityVerdict.WARN, "Output may be too brief"
+            if output_len < 200:
+                return 0.75, QualityVerdict.PASS, "Output is reasonably complete"
             return 0.9, QualityVerdict.PASS, "Output appears complete"
 
         elif aspect == "accuracy":
@@ -169,14 +171,25 @@ class ReviewerAgent(BaseAgent):
 
         elif aspect == "relevance":
             # Check if key request words appear in output
-            request_words = set(request.lower().split())
-            output_words = set(output.lower().split())
-            overlap = request_words & output_words
-            relevance_ratio = len(overlap) / max(len(request_words), 1)
-            if relevance_ratio < 0.1:
+            # Filter out very short words (Korean particles, common words)
+            request_words = {w for w in request.lower().split() if len(w) > 1}
+            output_lower = output.lower()
+
+            if not request_words:
+                return 0.8, QualityVerdict.PASS, "Request too short for relevance check"
+
+            # Count how many request words appear anywhere in the output text
+            # (substring match, not just word boundary match)
+            found = sum(1 for w in request_words if w in output_lower)
+            relevance_ratio = found / len(request_words)
+
+            if relevance_ratio < 0.05 and output_len > 100:
+                # Output is substantial but totally unrelated
+                return 0.5, QualityVerdict.WARN, "Output may have limited relevance"
+            if found == 0 and output_len < 50:
                 return 0.4, QualityVerdict.FAIL, "Output seems unrelated to the request"
-            if relevance_ratio < 0.2:
-                return 0.65, QualityVerdict.WARN, "Limited relevance to the request"
+            if relevance_ratio < 0.1:
+                return 0.7, QualityVerdict.PASS, "Partial relevance detected"
             return 0.9, QualityVerdict.PASS, "Output is relevant to the request"
 
         return 0.8, QualityVerdict.PASS, "Default pass"

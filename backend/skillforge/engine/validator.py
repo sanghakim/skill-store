@@ -6,8 +6,9 @@ Skill Validator - Validates skill definitions against the schema.
 from __future__ import annotations
 
 import re
+from pathlib import Path
 
-from skillforge.models import SkillDefinition, SkillValidationResult
+from skillforge.models import SkillDefinition, SkillValidationResult, SourceType
 
 
 class SkillValidator:
@@ -15,9 +16,99 @@ class SkillValidator:
 
     ID_PATTERN = re.compile(r"^[a-z][a-z0-9-]*$")
     VERSION_PATTERN = re.compile(r"^\d+\.\d+\.\d+$")
+    SKILLMD_NAME_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 
     @classmethod
     def validate(cls, skill: SkillDefinition) -> SkillValidationResult:
+        """Route to appropriate validation based on source_type."""
+        if skill.source_type == SourceType.SKILLMD:
+            return cls._validate_skillmd(skill)
+        return cls._validate_legacy(skill)
+
+    @classmethod
+    def _validate_skillmd(cls, skill: SkillDefinition) -> SkillValidationResult:
+        """Validate a SKILL.md-sourced skill against the Anthropic spec."""
+        errors: list[str] = []
+        warnings: list[str] = []
+        checks_passed = 0
+        checks_total = 0
+
+        def check(condition: bool, error_msg: str, is_warning: bool = False) -> None:
+            nonlocal checks_passed, checks_total
+            checks_total += 1
+            if condition:
+                checks_passed += 1
+            elif is_warning:
+                warnings.append(error_msg)
+                checks_passed += 1
+            else:
+                errors.append(error_msg)
+
+        # 1. Name format
+        name = skill.id
+        check(
+            bool(cls.SKILLMD_NAME_PATTERN.match(name)) and len(name) <= 64 and "--" not in name,
+            f'Skill name "{name}" must be 1-64 lowercase chars/hyphens, no leading/trailing/consecutive hyphens',
+        )
+
+        # 2. Description length
+        check(
+            0 < len(skill.description) <= 1024,
+            f"Description must be 1-1024 characters (got {len(skill.description)})",
+        )
+
+        # 3. Description quality
+        check(
+            len(skill.description) >= 20,
+            "Description is very short; include keywords for activation",
+            is_warning=True,
+        )
+
+        # 4. Instructions exist
+        check(
+            len(skill.instructions) > 0,
+            "SKILL.md body (instructions) is empty",
+        )
+
+        # 5. Instructions size
+        check(
+            len(skill.instructions) < 20000,
+            "Instructions exceed recommended 5000 tokens; consider using references/",
+            is_warning=True,
+        )
+
+        # 6. Compatibility length
+        if skill.compatibility:
+            check(
+                len(skill.compatibility) <= 500,
+                f"Compatibility must be <= 500 characters (got {len(skill.compatibility)})",
+            )
+        else:
+            checks_total += 1
+            checks_passed += 1
+
+        # 7. Name matches directory name
+        if skill.skill_dir:
+            dir_name = Path(skill.skill_dir).name
+            check(
+                name == dir_name,
+                f'Skill name "{name}" must match directory name "{dir_name}"',
+                is_warning=True,
+            )
+        else:
+            checks_total += 1
+            checks_passed += 1
+
+        return SkillValidationResult(
+            valid=len(errors) == 0,
+            errors=errors,
+            warnings=warnings,
+            checks_passed=checks_passed,
+            checks_total=checks_total,
+        )
+
+    @classmethod
+    def _validate_legacy(cls, skill: SkillDefinition) -> SkillValidationResult:
         errors: list[str] = []
         warnings: list[str] = []
         checks_passed = 0

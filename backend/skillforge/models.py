@@ -71,6 +71,12 @@ class QualityVerdict(str, Enum):
     WARN = "warn"
 
 
+class SourceType(str, Enum):
+    BUILTIN = "builtin"
+    YAML = "yaml"
+    SKILLMD = "skillmd"
+
+
 # ──────────────────────────────────────
 # Skill Schema Models
 # ──────────────────────────────────────
@@ -109,6 +115,17 @@ class SkillDefinition(BaseModel):
     settings: SkillSettings = Field(default_factory=SkillSettings)
     permissions: list[str] = Field(default_factory=list)
     tags: list[str] = Field(default_factory=list)
+
+    # Anthropic Agent Skills format fields
+    source_type: SourceType = SourceType.BUILTIN
+    skill_dir: str | None = None
+    instructions: str = ""
+    scripts: list[str] = Field(default_factory=list)
+    references: list[str] = Field(default_factory=list)
+    license_text: str = ""
+    compatibility: str = ""
+    allowed_tools: list[str] = Field(default_factory=list)
+    skill_metadata: dict[str, str] = Field(default_factory=dict)
 
     # Store metadata
     rating: float = 0.0

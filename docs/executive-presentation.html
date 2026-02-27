@@ -678,7 +678,7 @@
       </p>
       <div class="cover-meta">
         <span>Architecture Team</span>
-        <span>2026.02.21</span>
+        <span>2026.02.28</span>
         <span>Confidential</span>
       </div>
     </div>
@@ -748,9 +748,9 @@
           <div class="stat-detail">Working, Episodic, Semantic Memory</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value gradient">20+</div>
+          <div class="stat-value gradient">16</div>
           <div class="stat-label">기본 스킬</div>
-          <div class="stat-detail">문서, 이메일, 데이터, 번역 등</div>
+          <div class="stat-detail">YAML 13 + SKILL.md 3</div>
         </div>
         <div class="stat-card">
           <div class="stat-value gradient">&infin;</div>
@@ -772,10 +772,10 @@
 
       <div class="arch-visual">
         <div class="arch-row">
-          <div class="arch-box arch-user">Chat UI</div>
+          <div class="arch-box arch-user">Workspace UI<br><small>+File Attach</small></div>
           <div class="arch-box arch-user">Skill Store</div>
           <div class="arch-box arch-user">Skill Editor</div>
-          <div class="arch-box arch-user">Dashboard</div>
+          <div class="arch-box arch-user">Monitoring<br><small>Dashboard</small></div>
         </div>
         <div class="arch-arrow">&darr;</div>
         <div class="arch-row">
@@ -861,19 +861,20 @@
 
       <div class="grid-2" style="margin-top: 32px;">
         <div>
-          <h3 style="font-size:18px; margin-bottom:16px;">8개 카테고리, 20+ 기본 스킬</h3>
+          <h3 style="font-size:18px; margin-bottom:16px;">10개 카테고리, 16개 스킬</h3>
           <table class="compare-table">
             <thead>
-              <tr><th>Category</th><th>Skills</th><th>대표 기능</th></tr>
+              <tr><th>Category</th><th>Count</th><th>대표 기능</th></tr>
             </thead>
             <tbody>
               <tr><td>&#128196; Document</td><td>4</td><td>보고서, 회의록, 계약서, SOP</td></tr>
               <tr><td>&#9993; Email</td><td>2</td><td>이메일 작성, 스레드 요약</td></tr>
-              <tr><td>&#128200; Data</td><td>1</td><td>엑셀 분석, 인사이트 도출</td></tr>
+              <tr><td>&#128200; Data</td><td>2</td><td>엑셀 분석, 데이터 시각화</td></tr>
               <tr><td>&#128197; Schedule</td><td>1</td><td>일정 최적화, 충돌 감지</td></tr>
               <tr><td>&#127916; Presentation</td><td>2</td><td>슬라이드 구조, 발표 스크립트</td></tr>
               <tr><td>&#128100; HR</td><td>1</td><td>채용공고 작성</td></tr>
               <tr><td>&#127760; Translation</td><td>2</td><td>비즈니스 번역, 교정</td></tr>
+              <tr><td>&#128218; Knowledge</td><td>1</td><td>심층 리서치</td></tr>
               <tr><td>&#9881; Automation</td><td>1</td><td>정기 보고서 자동화</td></tr>
             </tbody>
           </table>
@@ -948,6 +949,16 @@
             <td>복잡한 업무</td>
             <td>여러 번 수동 분할 요청</td>
             <td><strong>자동 분해 &rarr; 병렬 실행 &rarr; 통합 출력</strong></td>
+          </tr>
+          <tr>
+            <td>파일 처리</td>
+            <td>파일 내용 직접 복사/붙여넣기</td>
+            <td><strong>Drag & Drop 첨부 → 자동 컨텍스트 주입</strong></td>
+          </tr>
+          <tr>
+            <td>모니터링</td>
+            <td>블랙박스, 성능 측정 불가</td>
+            <td><strong>실시간 대시보드 (KPI, 에이전트 통계, 오류 추적)</strong></td>
           </tr>
         </tbody>
       </table>
@@ -1142,9 +1153,9 @@
       <h2 class="slide-title">Implementation Roadmap</h2>
 
       <div class="timeline">
-        <div class="timeline-phase active">
-          <div class="timeline-dot"></div>
-          <div class="timeline-period">Phase 1 &bull; M1-M2</div>
+        <div class="timeline-phase active" style="border-top-color: var(--success);">
+          <div class="timeline-dot" style="background: var(--success); box-shadow: 0 0 12px rgba(34,197,94,0.5);"></div>
+          <div class="timeline-period" style="color: var(--success);">Phase 1 &bull; Complete</div>
           <div class="timeline-title">Foundation</div>
           <ul class="timeline-items">
             <li>Core 3 Agents 개발</li>
@@ -1153,15 +1164,26 @@
             <li>5개 기본 스킬</li>
           </ul>
         </div>
-        <div class="timeline-phase active">
-          <div class="timeline-dot"></div>
-          <div class="timeline-period">Phase 2 &bull; M3-M4</div>
+        <div class="timeline-phase active" style="border-top-color: var(--success);">
+          <div class="timeline-dot" style="background: var(--success); box-shadow: 0 0 12px rgba(34,197,94,0.5);"></div>
+          <div class="timeline-period" style="color: var(--success);">Phase 2 &bull; Complete</div>
           <div class="timeline-title">Platform</div>
           <ul class="timeline-items">
-            <li>5 Agent 완성</li>
-            <li>Skill Store 오픈</li>
-            <li>Visual Editor</li>
-            <li>3계층 메모리</li>
+            <li>5 Agent + Workspace UI</li>
+            <li>Skill Store + SKILL.md</li>
+            <li>WebSocket 스트리밍</li>
+            <li>3계층 메모리 + 221 테스트</li>
+          </ul>
+        </div>
+        <div class="timeline-phase active" style="border-top-color: var(--success);">
+          <div class="timeline-dot" style="background: var(--success); box-shadow: 0 0 12px rgba(34,197,94,0.5);"></div>
+          <div class="timeline-period" style="color: var(--success);">Phase 2.5 &bull; Complete</div>
+          <div class="timeline-title">Ops</div>
+          <ul class="timeline-items">
+            <li>File Upload 시스템</li>
+            <li>Monitoring 시스템</li>
+            <li>실시간 Dashboard</li>
+            <li>API 버그 수정</li>
           </ul>
         </div>
         <div class="timeline-phase">
@@ -1171,7 +1193,6 @@
           <ul class="timeline-items">
             <li>Fork & Share</li>
             <li>Rating System</li>
-            <li>Analytics</li>
             <li>100+ Skills 목표</li>
           </ul>
         </div>
@@ -1208,25 +1229,28 @@
 
       <div class="grid-3" style="margin-top: 40px; max-width: 800px; margin-left: auto; margin-right: auto;">
         <div class="stat-card">
-          <div class="stat-value" style="font-size:28px; color:var(--accent);">Phase 1</div>
-          <div class="stat-label">Foundation</div>
-          <div class="stat-detail" style="margin-top:8px;">예산 승인 요청<br>M1~M2 착수</div>
+          <div class="stat-value" style="font-size:28px; color:var(--success);">Phase 1-2.5</div>
+          <div class="stat-label">Complete</div>
+          <div class="stat-detail" style="margin-top:8px;">5 Agent + 16 Skills<br>File Upload + Monitoring</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="font-size:28px; color:var(--accent2);">Pilot</div>
-          <div class="stat-label">PoC 검증</div>
-          <div class="stat-detail" style="margin-top:8px;">1개 부서 파일럿<br>이메일+보고서 스킬</div>
+          <div class="stat-value" style="font-size:28px; color:var(--accent2);">Phase 3</div>
+          <div class="stat-label">Community</div>
+          <div class="stat-detail" style="margin-top:8px;">Fork & Share<br>100+ Skills 목표</div>
         </div>
         <div class="stat-card">
-          <div class="stat-value" style="font-size:28px; color:var(--accent3);">Scale</div>
-          <div class="stat-label">전사 확대</div>
-          <div class="stat-detail" style="margin-top:8px;">성과 기반<br>단계적 확산</div>
+          <div class="stat-value" style="font-size:28px; color:var(--accent3);">Phase 4</div>
+          <div class="stat-label">Scale</div>
+          <div class="stat-detail" style="margin-top:8px;">마켓플레이스<br>Enterprise</div>
         </div>
       </div>
 
       <div class="cta-actions">
-        <a href="../index.html" class="cta-btn cta-btn-primary">
-          &#128640;&nbsp; Skill Store Demo
+        <a href="../workspace.html" class="cta-btn cta-btn-primary">
+          &#128640;&nbsp; Workspace Demo
+        </a>
+        <a href="../dashboard.html" class="cta-btn cta-btn-secondary">
+          &#128202;&nbsp; Monitoring Dashboard
         </a>
         <a href="design-document.html" class="cta-btn cta-btn-secondary">
           &#128196;&nbsp; Technical Document
@@ -1234,7 +1258,7 @@
       </div>
 
       <p style="margin-top:32px; font-size:13px; color:var(--text-muted);">
-        Architecture Team &bull; 2026.02.21 &bull; Confidential
+        Architecture Team &bull; 2026.02.28 &bull; Confidential
       </p>
     </div>
     <div class="slide-num">12 / 12</div>

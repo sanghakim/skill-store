@@ -1,18 +1,23 @@
 """
 FastAPI Server - REST API + WebSocket for the SkillForge platform.
 Serves the workspace frontend and provides real-time agent event streaming.
+
+v2.0: Added file upload, monitoring endpoints, metrics middleware.
 """
 
 from __future__ import annotations
 
 import logging
+import os
+import shutil
+import uuid
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, HTTPException, UploadFile, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from skillforge.app import SkillForgeApp
 from skillforge.models import (
@@ -22,17 +27,32 @@ from skillforge.models import (
     SkillValidationResult,
     UserRequest,
 )
+from skillforge.monitoring.collector import MetricsCollector
+from skillforge.monitoring.middleware import MetricsMiddleware
 
 logger = logging.getLogger(__name__)
 
 # ── App Instance ──
 app_instance: SkillForgeApp | None = None
 
+# ── Upload config ──
+_project_root = Path(__file__).resolve().parent.parent.parent.parent
+UPLOAD_DIR = _project_root / "uploads"
+MAX_UPLOAD_SIZE = 10 * 1024 * 1024  # 10MB
+ALLOWED_EXTENSIONS = {
+    ".txt", ".csv", ".json", ".md", ".xlsx", ".pdf",
+    ".yaml", ".yml", ".py", ".html", ".xml", ".tsv",
+    ".log", ".conf", ".ini", ".toml",
+}
+
 
 def get_app() -> SkillForgeApp:
     global app_instance
     if app_instance is None:
-        app_instance = SkillForgeApp()
+        skills_dir = _project_root / "skills"
+        app_instance = SkillForgeApp(
+            skills_dir=str(skills_dir) if skills_dir.exists() else None,
+        )
         app_instance.initialize()
     return app_instance
 
@@ -41,7 +61,7 @@ def get_app() -> SkillForgeApp:
 api = FastAPI(
     title="SkillForge API",
     description="Multi-Agent System with Agentic Loop & Skill Store",
-    version="1.0.0",
+    version="2.0.0",
 )
 
 api.add_middleware(
@@ -52,6 +72,9 @@ api.add_middleware(
     allow_headers=["*"],
 )
 
+# Metrics middleware - must be added after CORS
+api.add_middleware(MetricsMiddleware)
+
 
 # ── Request/Response Models ──
 
@@ -59,6 +82,7 @@ class ChatRequest(BaseModel):
     message: str
     session_id: str | None = None
     user_id: str = "default"
+    attachments: list[str] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):
@@ -71,6 +95,7 @@ class ChatResponse(BaseModel):
     quality_score: float | None = None
     success: bool = True
     error: str | None = None
+    skills_used: list[str] = Field(default_factory=list)
 
 
 class SkillExecuteRequest(BaseModel):
@@ -100,26 +125,180 @@ class StatsResponse(BaseModel):
     registry_stats: dict
 
 
+class UploadResponse(BaseModel):
+    file_id: str
+    filename: str
+    size: int
+    mime_type: str
+    content_preview: str = ""
+
+
+# ═══════════════════════════════════════
+# File Upload Endpoint
+# ═══════════════════════════════════════
+
+@api.post("/api/v1/upload", response_model=UploadResponse)
+async def upload_file(file: UploadFile, session_id: str = "default"):
+    """
+    Upload a file attachment. The file content will be injected into the
+    next chat message as context for the AI agents.
+
+    Supported: .txt, .csv, .json, .md, .xlsx, .pdf, .yaml, .py, .html, etc.
+    Max size: 10MB
+    """
+    # Validate extension
+    ext = Path(file.filename or "").suffix.lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            400,
+            f"Unsupported file type: {ext}. Allowed: {', '.join(sorted(ALLOWED_EXTENSIONS))}",
+        )
+
+    # Read file content
+    content = await file.read()
+    if len(content) > MAX_UPLOAD_SIZE:
+        raise HTTPException(400, f"File too large. Max: {MAX_UPLOAD_SIZE // (1024*1024)}MB")
+
+    # Save to uploads directory
+    file_id = str(uuid.uuid4())[:12]
+    session_dir = UPLOAD_DIR / session_id
+    session_dir.mkdir(parents=True, exist_ok=True)
+
+    safe_name = f"{file_id}_{file.filename or 'file'}"
+    file_path = session_dir / safe_name
+    file_path.write_bytes(content)
+
+    # Try to extract text preview
+    content_preview = ""
+    text_extensions = {".txt", ".csv", ".json", ".md", ".yaml", ".yml", ".py", ".html",
+                       ".xml", ".tsv", ".log", ".conf", ".ini", ".toml"}
+    if ext in text_extensions:
+        try:
+            text = content.decode("utf-8", errors="replace")
+            content_preview = text[:2000]
+        except Exception:
+            content_preview = "(binary)"
+
+    logger.info("File uploaded: %s (%d bytes) → %s", file.filename, len(content), file_path)
+
+    return UploadResponse(
+        file_id=file_id,
+        filename=file.filename or "file",
+        size=len(content),
+        mime_type=file.content_type or "application/octet-stream",
+        content_preview=content_preview,
+    )
+
+
+@api.get("/api/v1/upload/{file_id}")
+async def get_upload_info(file_id: str, session_id: str = "default"):
+    """Get info about an uploaded file."""
+    session_dir = UPLOAD_DIR / session_id
+    if not session_dir.exists():
+        raise HTTPException(404, "File not found")
+
+    for f in session_dir.iterdir():
+        if f.name.startswith(file_id):
+            ext = f.suffix.lower()
+            content_preview = ""
+            text_extensions = {".txt", ".csv", ".json", ".md", ".yaml", ".yml", ".py", ".html"}
+            if ext in text_extensions:
+                try:
+                    content_preview = f.read_text(encoding="utf-8", errors="replace")[:2000]
+                except Exception:
+                    pass
+            return {
+                "file_id": file_id,
+                "filename": f.name.split("_", 1)[1] if "_" in f.name else f.name,
+                "size": f.stat().st_size,
+                "content_preview": content_preview,
+                "path": str(f),
+            }
+
+    raise HTTPException(404, "File not found")
+
+
 # ═══════════════════════════════════════
 # Orchestration Endpoints
 # ═══════════════════════════════════════
+
+def _build_attachment_context(attachments: list[str], session_id: str) -> str:
+    """Read uploaded files and build context string for the agentic loop."""
+    if not attachments:
+        return ""
+
+    parts = []
+    sid = session_id or "default"
+    session_dir = UPLOAD_DIR / sid
+
+    if not session_dir.exists():
+        return ""
+
+    for file_id in attachments:
+        for f in session_dir.iterdir():
+            if f.name.startswith(file_id):
+                ext = f.suffix.lower()
+                text_extensions = {".txt", ".csv", ".json", ".md", ".yaml", ".yml",
+                                   ".py", ".html", ".xml", ".tsv", ".log"}
+                if ext in text_extensions:
+                    try:
+                        text = f.read_text(encoding="utf-8", errors="replace")
+                        name = f.name.split("_", 1)[1] if "_" in f.name else f.name
+                        parts.append(f"\n\n[Attached file: {name}]\n{text[:8000]}")
+                    except Exception as exc:
+                        parts.append(f"\n\n[Attached file: {f.name} - read error: {exc}]")
+                else:
+                    name = f.name.split("_", 1)[1] if "_" in f.name else f.name
+                    parts.append(f"\n\n[Attached file: {name} ({f.stat().st_size} bytes, {ext})]")
+                break
+
+    return "".join(parts)
+
 
 @api.post("/api/v1/chat", response_model=ChatResponse)
 async def chat(request: ChatRequest):
     """Main chat endpoint - processes user input through the Agentic Loop."""
     sf = get_app()
+    mc = MetricsCollector()
+
+    # Build full message with attachments
+    full_message = request.message
+    if request.attachments:
+        attachment_context = _build_attachment_context(
+            request.attachments, request.session_id or "default"
+        )
+        full_message += attachment_context
+
     result: OrchestrationResult = await sf.loop.run(
-        user_input=request.message,
+        user_input=full_message,
         session_id=request.session_id,
         user_id=request.user_id,
     )
 
+    # Record metrics
+    mc.record_request(
+        latency_ms=result.total_time_ms,
+        success=result.success,
+        tokens=result.total_tokens,
+        iterations=result.iterations,
+    )
+    if result.quality_review:
+        mc.record_quality_score(result.quality_review.overall_score)
+    if not result.success and result.error:
+        mc.record_error(
+            code="CHAT_ERROR",
+            message=result.error,
+            session_id=result.session_id,
+        )
+
     plan_summary = None
+    skills_used = []
     if result.plan:
         plan_summary = " → ".join(
             f"{t.agent_role.value}:{t.skill_id or 'task'}"
             for t in result.plan.tasks
         )
+        skills_used = [t.skill_id for t in result.plan.tasks if t.skill_id]
 
     return ChatResponse(
         session_id=result.session_id,
@@ -131,6 +310,7 @@ async def chat(request: ChatRequest):
         quality_score=result.quality_review.overall_score if result.quality_review else None,
         success=result.success,
         error=result.error,
+        skills_used=skills_used,
     )
 
 
@@ -146,7 +326,11 @@ async def create_session(user_id: str = "default"):
 async def end_session(session_id: str):
     """End a session and save to episodic memory."""
     sf = get_app()
-    sf.memory.end_session(session_id)
+    try:
+        sf.memory.end_session(session_id)
+    except Exception as exc:
+        logger.warning("Failed to end session %s: %s", session_id, exc)
+        raise HTTPException(404, f"Session not found or already ended: {session_id}")
     return {"status": "ended", "session_id": session_id}
 
 
@@ -154,7 +338,10 @@ async def end_session(session_id: str):
 async def get_messages(session_id: str, last_n: int | None = None):
     """Get messages for a session."""
     sf = get_app()
-    msgs = sf.memory.get_messages(session_id, last_n)
+    try:
+        msgs = sf.memory.get_messages(session_id, last_n)
+    except Exception:
+        return {"session_id": session_id, "messages": [], "count": 0}
     return {
         "session_id": session_id,
         "messages": [m.model_dump(mode="json") for m in msgs],
@@ -217,7 +404,6 @@ async def create_skill(request: SkillCreateRequest):
     sf = get_app()
     from skillforge.engine.loader import SkillLoader
     skill = SkillLoader.from_dict(request.model_dump())
-    # Validate
     validation = sf.validate_skill(skill)
     if not validation.valid:
         raise HTTPException(400, detail={
@@ -319,7 +505,7 @@ async def get_stats():
 
 @api.get("/api/v1/health")
 async def health():
-    return {"status": "healthy", "version": "1.0.0"}
+    return {"status": "healthy", "version": "2.0.0"}
 
 
 @api.get("/api/v1/system/info")
@@ -328,6 +514,73 @@ async def system_info():
     sf = get_app()
     info = sf.get_system_info()
     return info
+
+
+# ═══════════════════════════════════════
+# Monitoring Endpoints
+# ═══════════════════════════════════════
+
+@api.get("/api/v1/monitoring/metrics")
+async def monitoring_metrics():
+    """Get all system metrics."""
+    mc = MetricsCollector()
+    return mc.get_metrics()
+
+
+@api.get("/api/v1/monitoring/health")
+async def monitoring_health():
+    """Detailed health check with component status."""
+    sf = get_app()
+    mc = MetricsCollector()
+
+    llm_status = "unknown"
+    if sf.sandbox:
+        backend = sf.sandbox._llm
+        llm_status = type(backend).__name__
+        if hasattr(backend, "model"):
+            llm_status = f"{backend.model} (active)"
+
+    return mc.get_health(
+        llm_status=llm_status,
+        skills_count=len(sf.registry.list_all()) if sf.registry else 0,
+        sessions_count=len(sf.memory.working.list_sessions()) if sf.memory else 0,
+        memory_stats=sf.memory.get_stats() if sf.memory else {},
+    )
+
+
+@api.get("/api/v1/monitoring/timeline")
+async def monitoring_timeline(minutes: int = 60):
+    """Get time-series metrics data."""
+    mc = MetricsCollector()
+    return {"timeline": mc.get_timeline(minutes=minutes)}
+
+
+@api.get("/api/v1/monitoring/agents")
+async def monitoring_agents():
+    """Get per-agent execution statistics."""
+    mc = MetricsCollector()
+    return {"agents": mc.get_agent_stats()}
+
+
+@api.get("/api/v1/monitoring/skills")
+async def monitoring_skills():
+    """Get per-skill usage statistics."""
+    mc = MetricsCollector()
+    return {"skills": mc.get_skill_stats()}
+
+
+@api.get("/api/v1/monitoring/errors")
+async def monitoring_errors(limit: int = 50):
+    """Get recent error log."""
+    mc = MetricsCollector()
+    return {"errors": mc.get_errors(limit=limit)}
+
+
+@api.get("/api/v1/monitoring/quality")
+async def monitoring_quality():
+    """Get quality score distribution."""
+    mc = MetricsCollector()
+    return mc.get_quality_histogram()
 
 
 # ═══════════════════════════════════════
@@ -340,7 +593,7 @@ async def ws_chat(websocket: WebSocket):
     WebSocket endpoint for real-time chat with agent event streaming.
 
     Client sends:
-        {"type": "message", "message": "...", "session_id": "..."}
+        {"type": "message", "message": "...", "session_id": "...", "attachments": [...]}
         {"type": "create_session", "user_id": "..."}
         {"type": "ping"}
 
@@ -351,7 +604,8 @@ async def ws_chat(websocket: WebSocket):
     """
     await websocket.accept()
     sf = get_app()
-    session_id = sf.memory.start_session()
+    mc = MetricsCollector()
+    session_id = sf.memory.start_session("default")
 
     await websocket.send_json({
         "type": "session_created",
@@ -398,43 +652,82 @@ async def ws_chat(websocket: WebSocket):
             if data.get("session_id"):
                 session_id = data["session_id"]
 
+            # Build full message with attachments
+            full_message = message
+            attachments = data.get("attachments", [])
+            if attachments:
+                attachment_context = _build_attachment_context(attachments, session_id)
+                full_message += attachment_context
+
             # Create the event emitter callback for real-time streaming
             async def emit_event(event: dict):
-                await websocket.send_json(event)
+                try:
+                    await websocket.send_json(event)
+                except RuntimeError:
+                    pass  # Client disconnected mid-stream
 
             # Run the agentic loop with event streaming
             result = await sf.loop.run(
-                user_input=message,
+                user_input=full_message,
                 session_id=session_id,
                 user_id=data.get("user_id", "default"),
                 event_callback=emit_event,
             )
 
+            # Record metrics
+            mc.record_request(
+                latency_ms=result.total_time_ms,
+                success=result.success,
+                tokens=result.total_tokens,
+                iterations=result.iterations,
+            )
+            if result.quality_review:
+                mc.record_quality_score(result.quality_review.overall_score)
+            if not result.success and result.error:
+                mc.record_error(
+                    code="WS_CHAT_ERROR",
+                    message=result.error,
+                    session_id=session_id,
+                )
+
             # Build plan summary
             plan_summary = None
+            skills_used = []
             if result.plan:
                 plan_summary = " → ".join(
                     f"{t.agent_role.value}:{t.skill_id or 'task'}"
                     for t in result.plan.tasks
                 )
+                skills_used = [t.skill_id for t in result.plan.tasks if t.skill_id]
 
             # Send final response
-            await websocket.send_json({
-                "type": "response",
-                "session_id": session_id,
-                "response": result.final_output,
-                "plan_summary": plan_summary,
-                "iterations": result.iterations,
-                "total_tokens": result.total_tokens,
-                "total_time_ms": result.total_time_ms,
-                "quality_score": result.quality_review.overall_score if result.quality_review else None,
-                "success": result.success,
-                "error": result.error,
-            })
+            try:
+                await websocket.send_json({
+                    "type": "response",
+                    "session_id": session_id,
+                    "response": result.final_output,
+                    "plan_summary": plan_summary,
+                    "iterations": result.iterations,
+                    "total_tokens": result.total_tokens,
+                    "total_time_ms": result.total_time_ms,
+                    "quality_score": result.quality_review.overall_score if result.quality_review else None,
+                    "success": result.success,
+                    "error": result.error,
+                    "skills_used": skills_used,
+                    "attachments": attachments,
+                })
+            except RuntimeError:
+                pass
 
     except WebSocketDisconnect:
-        sf.memory.end_session(session_id)
+        try:
+            sf.memory.end_session(session_id)
+        except Exception:
+            pass
         logger.info("WebSocket disconnected: %s", session_id)
+    except Exception as exc:
+        logger.error("WebSocket error: %s", exc)
+        mc.record_error(code="WS_ERROR", message=str(exc), session_id=session_id)
 
 
 # ═══════════════════════════════════════

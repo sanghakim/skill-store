@@ -126,6 +126,54 @@ class SkillRegistry:
     def is_installed(self, user_id: str, skill_id: str) -> bool:
         return skill_id in self._installed.get(user_id, set())
 
+    # ── Progressive Disclosure ──
+
+    def get_metadata(self, skill_id: str) -> dict[str, str] | None:
+        """Return only name + description (~100 tokens) for progressive disclosure."""
+        skill = self._skills.get(skill_id)
+        if not skill:
+            return None
+        return {
+            "id": skill.id,
+            "name": skill.name,
+            "description": skill.description,
+            "source_type": skill.source_type.value,
+        }
+
+    def get_instructions(self, skill_id: str) -> str | None:
+        """Return the full instructions for an activated skill.
+        For builtin/yaml skills, returns the prompt_template."""
+        skill = self._skills.get(skill_id)
+        if not skill:
+            return None
+        return skill.instructions or skill.prompt_template
+
+    def get_scripts(self, skill_id: str) -> list[str]:
+        """Return list of script paths relative to the skill directory."""
+        skill = self._skills.get(skill_id)
+        if not skill:
+            return []
+        return list(skill.scripts)
+
+    def get_references(self, skill_id: str) -> list[str]:
+        """Return list of reference file paths relative to the skill directory."""
+        skill = self._skills.get(skill_id)
+        if not skill:
+            return []
+        return list(skill.references)
+
+    def get_all_metadata(self) -> list[dict[str, str]]:
+        """Return metadata for all registered skills (for startup discovery)."""
+        return [
+            {
+                "id": s.id,
+                "name": s.name,
+                "description": s.description,
+                "source_type": s.source_type.value,
+            }
+            for s in self._skills.values()
+        ]
+
     # ── Stats ──
 
     def get_stats(self) -> dict:

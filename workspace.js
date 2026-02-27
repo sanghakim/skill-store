@@ -39,6 +39,10 @@ const State = {
     // Sessions
     sessions: [],
 
+    // Attachments
+    pendingFiles: [],       // {file: File, id: null, name, size}
+    uploadedFiles: [],      // {file_id, filename, size, mime_type, content_preview}
+
     // UI
     rightPanelMode: 'activity',
 };
@@ -90,6 +94,16 @@ const CATEGORY_LABELS = {
     other: '&#128736; &#44592;&#53440;',
 };
 
+const FILE_ICONS = {
+    '.txt': '&#128196;', '.csv': '&#128202;', '.json': '&#128203;',
+    '.md': '&#128221;', '.xlsx': '&#128202;', '.pdf': '&#128213;',
+    '.yaml': '&#9881;', '.yml': '&#9881;', '.py': '&#128187;',
+    '.html': '&#127760;', '.xml': '&#128196;', '.tsv': '&#128202;',
+    '.log': '&#128196;', 'default': '&#128206;',
+};
+
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+
 const API_BASE = window.location.origin;
 const WS_URL = `ws://${window.location.host}/ws/chat`;
 
@@ -100,14 +114,22 @@ function init() {
     connectWebSocket();
     loadSkills();
     restoreSession();
+    setupDragDrop();
 
     // Setup input handlers
     const input = document.getElementById('chatInput');
     input.addEventListener('input', () => {
         const count = input.value.length;
         document.getElementById('charCount').textContent = count;
-        document.getElementById('sendBtn').disabled = count === 0 || State.isProcessing;
+        updateSendButton();
     });
+}
+
+function updateSendButton() {
+    const input = document.getElementById('chatInput');
+    const hasText = input.value.trim().length > 0;
+    const hasFiles = State.pendingFiles.length > 0;
+    document.getElementById('sendBtn').disabled = (!hasText && !hasFiles) || State.isProcessing;
 }
 
 function restoreSession() {
@@ -302,13 +324,29 @@ function handleWebSocketEvent(data) {
 // ═══════════════════════════════════════
 // Chat - Sending Messages
 // ═══════════════════════════════════════
-function sendMessage() {
+async function sendMessage() {
     const input = document.getElementById('chatInput');
     const message = input.value.trim();
-    if (!message || State.isProcessing || !State.wsConnected) return;
+    const hasFiles = State.pendingFiles.length > 0;
+    if ((!message && !hasFiles) || State.isProcessing || !State.wsConnected) return;
 
-    // Add user message to UI
-    addUserMessage(message);
+    // Upload pending files first
+    const uploadedIds = [];
+    const fileNames = [];
+    if (hasFiles) {
+        for (const pf of State.pendingFiles) {
+            try {
+                const result = await uploadFile(pf.file);
+                uploadedIds.push(result.file_id);
+                fileNames.push({ name: pf.name, size: pf.size });
+            } catch (e) {
+                showToast(`파일 업로드 실패: ${pf.name}`, 'error');
+            }
+        }
+    }
+
+    // Add user message to UI (with attachment info)
+    addUserMessage(message || '(파일 첨부)', fileNames);
 
     // Hide welcome message
     const welcome = document.getElementById('welcomeMessage');
@@ -317,16 +355,18 @@ function sendMessage() {
     // Send via WebSocket
     State.ws.send(JSON.stringify({
         type: 'message',
-        message: message,
+        message: message || '첨부된 파일을 분석해주세요',
         session_id: State.sessionId,
         user_id: State.userId,
+        attachments: uploadedIds,
     }));
 
-    // Clear input
+    // Clear input and attachments
     input.value = '';
     input.style.height = 'auto';
     document.getElementById('charCount').textContent = '0';
-    document.getElementById('sendBtn').disabled = true;
+    clearAttachments();
+    updateSendButton();
 }
 
 function sendSuggestion(text) {
@@ -352,16 +392,27 @@ function autoResizeInput(el) {
 // ═══════════════════════════════════════
 // Chat - Message Rendering
 // ═══════════════════════════════════════
-function addUserMessage(content) {
+function addUserMessage(content, attachments = []) {
     const id = ++State.messageIdCounter;
-    State.messages.push({ id, role: 'user', content, timestamp: new Date() });
+    State.messages.push({ id, role: 'user', content, attachments, timestamp: new Date() });
 
     const container = document.getElementById('chatMessages');
+    let attachHtml = '';
+    if (attachments.length > 0) {
+        attachHtml = '<div class="message-attachments">';
+        attachments.forEach(a => {
+            const ext = '.' + (a.name || '').split('.').pop().toLowerCase();
+            const icon = FILE_ICONS[ext] || FILE_ICONS['default'];
+            attachHtml += `<span class="msg-attachment"><span class="att-icon">${icon}</span>${escapeHtml(a.name)} (${formatFileSize(a.size)})</span>`;
+        });
+        attachHtml += '</div>';
+    }
+
     const html = `
         <div class="message user" id="msg-${id}">
             <div class="message-avatar">U</div>
             <div>
-                <div class="message-body">${escapeHtml(content)}</div>
+                <div class="message-body">${escapeHtml(content)}${attachHtml}</div>
                 <div class="message-meta">
                     <span>${formatTime(new Date())}</span>
                 </div>
@@ -895,6 +946,140 @@ function switchSession(sessionId) {
         type: 'switch_session',
         session_id: sessionId,
     }));
+}
+
+// ═══════════════════════════════════════
+// File Attachments
+// ═══════════════════════════════════════
+
+function setupDragDrop() {
+    const area = document.getElementById('chatInputArea');
+    const overlay = document.getElementById('dragOverlay');
+    let dragCounter = 0;
+
+    area.addEventListener('dragenter', (e) => {
+        e.preventDefault();
+        dragCounter++;
+        area.classList.add('drag-over');
+        overlay.style.display = 'flex';
+    });
+
+    area.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        dragCounter--;
+        if (dragCounter <= 0) {
+            dragCounter = 0;
+            area.classList.remove('drag-over');
+            overlay.style.display = 'none';
+        }
+    });
+
+    area.addEventListener('dragover', (e) => {
+        e.preventDefault();
+    });
+
+    area.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dragCounter = 0;
+        area.classList.remove('drag-over');
+        overlay.style.display = 'none';
+        if (e.dataTransfer.files.length > 0) {
+            addFiles(e.dataTransfer.files);
+        }
+    });
+}
+
+function triggerFileSelect() {
+    document.getElementById('fileInput').click();
+}
+
+function handleFileSelect(event) {
+    const files = event.target.files;
+    if (files.length > 0) {
+        addFiles(files);
+    }
+    event.target.value = ''; // Reset so same file can be selected again
+}
+
+function addFiles(fileList) {
+    for (const file of fileList) {
+        if (file.size > MAX_FILE_SIZE) {
+            showToast(`파일이 너무 큽니다: ${file.name} (최대 10MB)`, 'error');
+            continue;
+        }
+        const ext = '.' + file.name.split('.').pop().toLowerCase();
+        const allowed = ['.txt','.csv','.json','.md','.xlsx','.pdf','.yaml','.yml','.py','.html','.xml','.tsv','.log','.conf','.ini','.toml'];
+        if (!allowed.includes(ext)) {
+            showToast(`지원하지 않는 파일 형식: ${ext}`, 'error');
+            continue;
+        }
+        // Check duplicate
+        if (State.pendingFiles.some(p => p.name === file.name && p.size === file.size)) {
+            continue;
+        }
+        State.pendingFiles.push({ file, name: file.name, size: file.size });
+    }
+    renderAttachmentPreview();
+    updateSendButton();
+}
+
+function removeAttachment(index) {
+    State.pendingFiles.splice(index, 1);
+    renderAttachmentPreview();
+    updateSendButton();
+}
+
+function clearAttachments() {
+    State.pendingFiles = [];
+    State.uploadedFiles = [];
+    renderAttachmentPreview();
+}
+
+function renderAttachmentPreview() {
+    const container = document.getElementById('attachmentPreview');
+    if (State.pendingFiles.length === 0) {
+        container.style.display = 'none';
+        container.innerHTML = '';
+        return;
+    }
+
+    container.style.display = 'flex';
+    container.innerHTML = State.pendingFiles.map((pf, i) => {
+        const ext = '.' + pf.name.split('.').pop().toLowerCase();
+        const icon = FILE_ICONS[ext] || FILE_ICONS['default'];
+        return `
+            <div class="attachment-chip">
+                <span class="att-icon">${icon}</span>
+                <span class="att-name" title="${escapeHtml(pf.name)}">${escapeHtml(pf.name)}</span>
+                <span class="att-size">${formatFileSize(pf.size)}</span>
+                <button class="att-remove" onclick="removeAttachment(${i})" title="삭제">&times;</button>
+            </div>
+        `;
+    }).join('');
+}
+
+async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const sessionId = State.sessionId || 'default';
+    const res = await fetch(`${API_BASE}/api/v1/upload?session_id=${sessionId}`, {
+        method: 'POST',
+        body: formData,
+    });
+
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({ detail: 'Upload failed' }));
+        throw new Error(err.detail || 'Upload failed');
+    }
+
+    return await res.json();
+}
+
+function formatFileSize(bytes) {
+    if (bytes < 1024) return bytes + 'B';
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + 'KB';
+    return (bytes / (1024 * 1024)).toFixed(1) + 'MB';
 }
 
 // ═══════════════════════════════════════

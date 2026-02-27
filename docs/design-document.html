@@ -432,7 +432,7 @@
     <!-- Sidebar TOC -->
     <nav class="doc-sidebar no-print">
       <h1>SkillForge</h1>
-      <div class="doc-subtitle">Technical Design Document v1.0</div>
+      <div class="doc-subtitle">Technical Design Document v2.0</div>
 
       <div class="toc-section">
         <div class="toc-section-title">Overview</div>
@@ -452,12 +452,16 @@
         <div class="toc-section-title">Core Systems</div>
         <a href="#s6" class="toc-link">6. Memory & Context</a>
         <a href="#s7" class="toc-link">7. Skill Engine</a>
-        <a href="#s8" class="toc-link">8. Skill Schema</a>
+        <a href="#s8" class="toc-link">8. Skill Schema (YAML)</a>
+        <a href="#s8b" class="toc-link">8b. Agent Skills (SKILL.md)</a>
       </div>
 
       <div class="toc-section">
         <div class="toc-section-title">Platform</div>
         <a href="#s9" class="toc-link">9. Skill Store</a>
+        <a href="#s9b" class="toc-link">9b. Workspace UI</a>
+        <a href="#s9c" class="toc-link">9c. File Upload System</a>
+        <a href="#s9d" class="toc-link">9d. Monitoring System</a>
         <a href="#s10" class="toc-link">10. Skills Catalog</a>
         <a href="#s11" class="toc-link">11. Security & Safety</a>
       </div>
@@ -478,11 +482,11 @@
         <h1>SkillForge<br>Multi-Agent System<br>Technical Design Document</h1>
         <p class="cover-sub">Agentic Loop & Agent Skills 기반 멀티 에이전트 플랫폼 설계</p>
         <dl class="doc-meta-table">
-          <dt>Document Version</dt>  <dd>1.0.0</dd>
-          <dt>Status</dt>            <dd><span class="tag tag-blue">Draft</span></dd>
+          <dt>Document Version</dt>  <dd>3.0.0</dd>
+          <dt>Status</dt>            <dd><span class="tag tag-green">Implemented</span></dd>
           <dt>Author</dt>            <dd>Architecture Team</dd>
           <dt>Created</dt>           <dd>2026-02-21</dd>
-          <dt>Last Updated</dt>      <dd>2026-02-21</dd>
+          <dt>Last Updated</dt>      <dd>2026-02-28</dd>
           <dt>Classification</dt>    <dd>Internal / Confidential</dd>
         </dl>
       </section>
@@ -505,8 +509,12 @@
           <tr><td>Architecture Pattern</td><td>Orchestrator + Worker Pool</td><td>유연한 스케일링, 에이전트 독립 배포</td></tr>
           <tr><td>Agent Communication</td><td>Shared Context Bus (Pub/Sub)</td><td>비동기 병렬 처리, 느슨한 결합</td></tr>
           <tr><td>Memory Model</td><td>3-Layer (Working/Episodic/Semantic)</td><td>단기-장기 기억 분리, 효율적 컨텍스트 관리</td></tr>
-          <tr><td>Skill Definition</td><td>YAML Schema + Prompt Template</td><td>비개발자 접근성, 버전 관리 용이</td></tr>
+          <tr><td>Skill Definition</td><td>Dual Format: YAML + SKILL.md</td><td>YAML: 구조화된 I/O, SKILL.md: Anthropic 호환 자유형 지시</td></tr>
           <tr><td>Skill Execution</td><td>Sandboxed Runtime</td><td>보안 격리, 장애 전파 방지</td></tr>
+          <tr><td>Frontend</td><td>Vanilla JS (no framework)</td><td>의존성 최소화, 빌드 단계 없이 즉시 배포</td></tr>
+          <tr><td>Real-time Streaming</td><td>WebSocket + Event Callback</td><td>에이전트 활동을 실시간 스트리밍, 클라이언트별 콜백 주입</td></tr>
+          <tr><td>File Upload</td><td>Multipart + Session-scoped Storage</td><td>첨부 파일 컨텍스트 주입, 텍스트/바이너리 자동 감지</td></tr>
+          <tr><td>Monitoring</td><td>Singleton MetricsCollector + Middleware</td><td>Thread-safe 메트릭 수집, HTTP 자동 기록, 실시간 대시보드</td></tr>
         </tbody>
       </table>
 
@@ -551,11 +559,12 @@
       <div class="arch-diagram">
 <pre>
  USER INTERFACE LAYER
- +-----------+  +-------------+  +----------+  +------------+
- |  Chat UI  |  | Skill Store |  |  Skill   |  | Dashboard  |
- |           |  |  (Browse /  |  |  Editor  |  | (Monitor)  |
- |           |  |   Install)  |  | (Create) |  |            |
- +-----+-----+  +------+------+  +----+-----+  +-----+------+
+ +-------------+  +-------------+  +----------+  +---------------+
+ | Workspace   |  | Skill Store |  |  Skill   |  |  Monitoring   |
+ | (Chat +     |  |  (Browse /  |  |  Editor  |  |  Dashboard    |
+ |  Activity   |  |   Install)  |  | (Create) |  |  (KPI/Charts) |
+ |  +Attach)   |  |             |  |          |  |               |
+ +------+------+  +------+------+  +----+-----+  +------+--------+
        |               |              |               |
  ======|===============|==============|===============|========
        v               v              v               v
@@ -617,15 +626,17 @@
           <tr><th>Layer</th><th>Technology</th><th>Purpose</th></tr>
         </thead>
         <tbody>
-          <tr><td>LLM Backend</td><td>Claude / GPT / Open-source models</td><td>에이전트 추론 엔진</td></tr>
-          <tr><td>Orchestration</td><td>Custom Python + LangGraph</td><td>에이전트 워크플로우 관리</td></tr>
-          <tr><td>Message Queue</td><td>Redis Streams / NATS</td><td>에이전트 간 비동기 통신</td></tr>
-          <tr><td>Vector DB</td><td>Pinecone / Qdrant / ChromaDB</td><td>Semantic Memory 저장</td></tr>
-          <tr><td>Persistent DB</td><td>PostgreSQL</td><td>Episodic Memory, 사용자 데이터</td></tr>
-          <tr><td>Cache</td><td>Redis</td><td>Working Memory, 세션 상태</td></tr>
-          <tr><td>Frontend</td><td>React / Next.js</td><td>Skill Store, Editor UI</td></tr>
-          <tr><td>API Gateway</td><td>FastAPI</td><td>REST + WebSocket API</td></tr>
-          <tr><td>Infra</td><td>Kubernetes + Docker</td><td>에이전트 컨테이너 오케스트레이션</td></tr>
+          <tr><td>LLM Backend</td><td>Claude API (Sonnet 4) + Pluggable Backend Protocol</td><td>에이전트 추론 엔진, SimulatedLLMBackend로 테스트</td></tr>
+          <tr><td>Orchestration</td><td>Custom Python (AgenticLoop, Dispatcher)</td><td>Plan-Execute-Review 사이클, event_callback 스트리밍</td></tr>
+          <tr><td>Message Bus</td><td>In-Process Shared Context Bus (Pub/Sub)</td><td>에이전트 간 비동기 통신, 상태 스냅샷</td></tr>
+          <tr><td>Semantic Search</td><td>In-Memory Vector Store (TF-IDF + Cosine)</td><td>Semantic Memory RAG 검색</td></tr>
+          <tr><td>Persistent Storage</td><td>JSON File (Episodic) + In-Memory (Working)</td><td>세션 간 기억 유지, 경량 배포</td></tr>
+          <tr><td>Frontend</td><td>Vanilla JS + CSS (Dark Theme)</td><td>Skill Store, Workspace, Skill Editor, Monitoring Dashboard</td></tr>
+          <tr><td>API Server</td><td>FastAPI + Uvicorn</td><td>REST + WebSocket API, File Upload, Static Files 서빙</td></tr>
+          <tr><td>Skill Format</td><td>YAML Schema + SKILL.md (Anthropic Agent Skills)</td><td>구조화 정의 + 자유형 마크다운 지시문 병행</td></tr>
+          <tr><td>Monitoring</td><td>MetricsCollector + MetricsMiddleware</td><td>Thread-safe 싱글턴 메트릭 수집, SVG 차트 대시보드</td></tr>
+          <tr><td>File Upload</td><td>FastAPI UploadFile + Session Storage</td><td>세션별 파일 저장, 컨텍스트 자동 주입, 10MB 제한</td></tr>
+          <tr><td>Testing</td><td>pytest (221 tests) + pytest-asyncio</td><td>전체 시스템 테스트, 100% 통과</td></tr>
         </tbody>
       </table>
 
@@ -860,9 +871,18 @@
       <!-- 7. Skill Engine -->
       <h2 id="s7"><span class="section-num">07</span>Skill Execution Engine</h2>
 
-      <h3>7.1 Skill Lifecycle</h3>
+      <h3>7.1 Skill Lifecycle (Dual Format)</h3>
+      <p>SkillForge는 두 가지 스킬 정의 형식을 지원합니다:</p>
+      <div class="callout callout-info">
+        <strong>YAML Format (Built-in/Custom)</strong>
+        <p>구조화된 입출력 스키마와 <code>{{variable}}</code> 프롬프트 템플릿 기반. 13개 기본 스킬이 이 형식을 사용합니다.</p>
+      </div>
+      <div class="callout callout-success">
+        <strong>SKILL.md Format (Anthropic Agent Skills)</strong>
+        <p>YAML 프론트매터 + 마크다운 지시문 기반. 디렉토리 구조 (<code>scripts/</code>, <code>references/</code>)를 포함하며, Progressive Disclosure (3단계 로딩)를 지원합니다.</p>
+      </div>
       <div class="flow-container">
-        <span class="flow-step">Define (YAML)</span>
+        <span class="flow-step">Define (YAML / SKILL.md)</span>
         <span class="flow-arrow">&rarr;</span>
         <span class="flow-step">Validate</span>
         <span class="flow-arrow">&rarr;</span>
@@ -995,6 +1015,78 @@
         </tbody>
       </table>
 
+      <!-- 8b. Anthropic Agent Skills (SKILL.md) -->
+      <div class="page-break"></div>
+      <h2 id="s8b"><span class="section-num">08b</span>Anthropic Agent Skills (SKILL.md)</h2>
+
+      <p>v2.0에서 추가된 Anthropic Agent Skills 형식은 디렉토리 기반의 스킬 정의를 지원하며, 기존 YAML 형식과 공존합니다.</p>
+
+      <h3>8b.1 SKILL.md File Format</h3>
+      <pre><code><span class="code-comment"># SKILL.md = YAML Frontmatter + Markdown Body</span>
+
+<span class="code-keyword">---</span>
+<span class="code-type">name</span>: <span class="code-string">email-composer</span>
+<span class="code-type">description</span>: <span class="code-string">Compose professional business emails in Korean and English</span>
+<span class="code-type">license</span>: <span class="code-string">MIT</span>
+<span class="code-type">compatibility</span>: <span class="code-string">">=0.1.0"</span>
+<span class="code-type">allowed-tools</span>: <span class="code-string">Read Edit</span>
+<span class="code-type">metadata</span>:
+  <span class="code-type">version</span>: <span class="code-string">"1.0.0"</span>
+  <span class="code-type">author</span>: <span class="code-string">SkillForge</span>
+<span class="code-keyword">---</span>
+
+# Email Composer
+
+You are a professional business email writer...
+
+## Guidelines
+1. Analyze the request...
+2. Structure the email...</code></pre>
+
+      <h3>8b.2 Directory Structure</h3>
+      <pre><code>skills/
+  email-composer/
+    <span class="code-type">SKILL.md</span>          <span class="code-comment"># Frontmatter + Instructions</span>
+  doc-drafter/
+    <span class="code-type">SKILL.md</span>
+    references/
+      <span class="code-string">TEMPLATES.md</span>  <span class="code-comment"># Reference files (loaded on demand)</span>
+  data-analyzer/
+    <span class="code-type">SKILL.md</span>
+    scripts/
+      <span class="code-string">format_table.py</span>  <span class="code-comment"># Executable scripts</span></code></pre>
+
+      <h3>8b.3 Progressive Disclosure (3-Tier Loading)</h3>
+      <table>
+        <thead>
+          <tr><th>Tier</th><th>Data</th><th>Size</th><th>When Loaded</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Tier 1: Metadata</strong></td><td>name, description, source_type</td><td>~100 tokens</td><td>App startup (all skills)</td></tr>
+          <tr><td><strong>Tier 2: Instructions</strong></td><td>Full SKILL.md body</td><td>&lt;5K tokens</td><td>Skill activation (matched by planner)</td></tr>
+          <tr><td><strong>Tier 3: Resources</strong></td><td>scripts/, references/</td><td>Variable</td><td>On-demand during execution</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8b.4 Validation Rules (SKILL.md)</h3>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Check</th><th>Rule</th><th>Severity</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>1</td><td>Name format</td><td>1-64 lowercase chars/hyphens, no consecutive hyphens</td><td>Error</td></tr>
+          <tr><td>2</td><td>Description length</td><td>1-1024 characters</td><td>Error</td></tr>
+          <tr><td>3</td><td>Description quality</td><td>&ge;20 chars with activation keywords</td><td>Warning</td></tr>
+          <tr><td>4</td><td>Instructions exist</td><td>Body must not be empty</td><td>Error</td></tr>
+          <tr><td>5</td><td>Instructions size</td><td>&lt;20,000 chars (consider references/)</td><td>Warning</td></tr>
+          <tr><td>6</td><td>Compatibility</td><td>&le;500 chars</td><td>Error</td></tr>
+          <tr><td>7</td><td>Directory name match</td><td>name == directory name</td><td>Warning</td></tr>
+        </tbody>
+      </table>
+
+      <h3>8b.5 Description-Based Activation</h3>
+      <p>SKILL.md 스킬은 키워드 힌트 없이도 Planner가 사용자 입력과 스킬 description의 단어 오버랩을 분석하여 자동으로 활성화합니다. 3자 초과 유의미 단어 2개 이상 매칭 시 활성화되며, 매칭 강도순으로 상위 3개까지 선택합니다.</p>
+
       <!-- 9. Skill Store -->
       <h2 id="s9"><span class="section-num">09</span>Skill Store Platform</h2>
 
@@ -1035,27 +1127,313 @@ POST   /api/v1/skills/:id/validate   <span class="code-comment"># Validate skill
 POST   /api/v1/skills/:id/test       <span class="code-comment"># Test run skill</span>
 
 POST   /api/v1/skills/:id/rate       <span class="code-comment"># Rate skill</span>
-POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</span></code></pre>
+POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</span>
+
+<span class="code-comment"># File Upload</span>
+POST   /api/v1/upload                <span class="code-comment"># Upload file attachment</span>
+GET    /api/v1/upload/:file_id       <span class="code-comment"># Get upload info</span>
+
+<span class="code-comment"># Monitoring</span>
+GET    /api/v1/monitoring/metrics    <span class="code-comment"># System-wide metrics</span>
+GET    /api/v1/monitoring/health     <span class="code-comment"># Detailed health check</span>
+GET    /api/v1/monitoring/timeline   <span class="code-comment"># Time-series data</span>
+GET    /api/v1/monitoring/agents     <span class="code-comment"># Per-agent stats</span>
+GET    /api/v1/monitoring/skills     <span class="code-comment"># Per-skill stats</span>
+GET    /api/v1/monitoring/errors     <span class="code-comment"># Recent error log</span>
+GET    /api/v1/monitoring/quality    <span class="code-comment"># Quality histogram</span></code></pre>
+
+      <!-- 9b. Workspace UI -->
+      <div class="page-break"></div>
+      <h2 id="s9b"><span class="section-num">09b</span>Workspace UI</h2>
+
+      <div class="callout">
+        <strong>AI Workspace</strong> &mdash; Claude Cowork 스타일의 실시간 에이전트 활동 시각화 인터페이스.
+        Chat + Agent Activity 2-pane 레이아웃으로 멀티에이전트 실행 과정을 투명하게 보여줍니다.
+      </div>
+
+      <h3>9b.1 Architecture</h3>
+      <pre><code>┌─────────────────────────────────────────────────────────────────┐
+│  workspace.html (Two-Pane Layout)                               │
+│  ┌──────────┬──────────────────┬───────────────────────────┐    │
+│  │ Sidebar  │   Chat Panel     │  Workspace Panel          │    │
+│  │ (Skills) │   - Messages     │  - Agent Activity Stream  │    │
+│  │ 240px    │   - Markdown     │  - Task DAG Visualization │    │
+│  │ toggle   │   - Input        │  - Quality Review Gauge   │    │
+│  └──────────┴──────────────────┴───────────────────────────┘    │
+│                        ↕ WebSocket (enhanced)                   │
+├─────────────────────────────────────────────────────────────────┤
+│  FastAPI Backend (server.py)                                    │
+│  ┌──────────────────────────────────────────────────────────┐   │
+│  │ WebSocket /ws/chat  ←→  AgenticLoop (event_callback)     │   │
+│  │ REST /api/v1/*      ←→  SkillRegistry, Memory            │   │
+│  └──────────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────────┘</code></pre>
+
+      <h3>9b.2 Frontend Components</h3>
+      <table>
+        <thead>
+          <tr><th>File</th><th>Purpose</th><th>Key Features</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>workspace.html</code></td><td>메인 레이아웃</td><td>CSS Grid 2-pane, 반응형, 사이드바 토글</td></tr>
+          <tr><td><code>workspace.js</code></td><td>상태 관리 + 렌더링</td><td>WebSocket 자동 재접속, 마크다운 파서, 이벤트 라우터</td></tr>
+          <tr><td><code>workspace.css</code></td><td>다크 테마 스타일</td><td>에이전트별 컬러 코딩, 슬라이드-인 애니메이션</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9b.3 WebSocket Event Protocol</h3>
+      <p><strong>Client → Server</strong></p>
+      <pre><code><span class="code-comment">// 메시지 전송</span>
+{"type": "message", "message": "이메일 작성해줘", "session_id": "uuid"}
+<span class="code-comment">// 세션 생성/전환</span>
+{"type": "create_session", "user_id": "default"}
+{"type": "switch_session", "session_id": "uuid"}
+<span class="code-comment">// 연결 유지</span>
+{"type": "ping"}</code></pre>
+
+      <p><strong>Server → Client (실행 순서)</strong></p>
+      <pre><code>session_created
+  → processing_started
+    → intent_analyzed        <span class="code-comment"># 의도 분석 결과</span>
+    → plan_created           <span class="code-comment"># 태스크 DAG 생성</span>
+      → task_started         <span class="code-comment"># 에이전트별 태스크 시작</span>
+      → task_completed       <span class="code-comment"># 태스크 완료 (반복)</span>
+    → review_completed       <span class="code-comment"># 품질 리뷰 결과</span>
+    → iteration_complete     <span class="code-comment"># 이터레이션 종료</span>
+    → replanning             <span class="code-comment"># 품질 미달 시 재계획</span>
+  → response                 <span class="code-comment"># 최종 응답</span>
+→ processing_complete        <span class="code-comment"># 처리 완료</span></code></pre>
+
+      <h3>9b.4 Agent Color Scheme</h3>
+      <table>
+        <thead>
+          <tr><th>Agent</th><th>Color</th><th>Hex</th><th>Role</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Planner</td><td style="background:#3b82f6;color:white;text-align:center;border-radius:4px;">Blue</td><td><code>#3b82f6</code></td><td>의도 분석 + 태스크 계획</td></tr>
+          <tr><td>Executor</td><td style="background:#6366f1;color:white;text-align:center;border-radius:4px;">Indigo</td><td><code>#6366f1</code></td><td>스킬 실행</td></tr>
+          <tr><td>Reviewer</td><td style="background:#22c55e;color:white;text-align:center;border-radius:4px;">Green</td><td><code>#22c55e</code></td><td>품질 리뷰</td></tr>
+          <tr><td>Research</td><td style="background:#06b6d4;color:white;text-align:center;border-radius:4px;">Cyan</td><td><code>#06b6d4</code></td><td>정보 수집 + 분석</td></tr>
+          <tr><td>Creative</td><td style="background:#a855f7;color:white;text-align:center;border-radius:4px;">Purple</td><td><code>#a855f7</code></td><td>창의적 콘텐츠 생성</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9b.5 Key UI Features</h3>
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Real-time Activity Stream</strong></td><td>에이전트 이벤트를 타임라인으로 실시간 표시, 에이전트별 컬러 코딩</td></tr>
+          <tr><td><strong>Task DAG Visualization</strong></td><td>CSS Flexbox + SVG 커넥터로 태스크 의존성 그래프 시각화</td></tr>
+          <tr><td><strong>Quality Review Gauge</strong></td><td>SVG 원형 게이지로 품질 점수 표시 (0~1.0)</td></tr>
+          <tr><td><strong>Markdown Rendering</strong></td><td>인라인 마크다운 파서 (헤더, 볼드, 코드블록, 리스트, 테이블)</td></tr>
+          <tr><td><strong>Session Management</strong></td><td>localStorage 기반 세션 기록 저장 및 전환</td></tr>
+          <tr><td><strong>Auto-reconnect</strong></td><td>WebSocket 끊김 시 지수 백오프(1s→2s→4s) 자동 재접속</td></tr>
+          <tr><td><strong>Skill Browser</strong></td><td>사이드바에서 카테고리별 스킬 탐색 및 검색</td></tr>
+          <tr><td><strong>File Attachment</strong></td><td>Drag & Drop + 📎 버튼으로 파일 첨부, 자동 업로드 후 에이전트 컨텍스트 주입</td></tr>
+          <tr><td><strong>Attachment Preview</strong></td><td>첨부 파일 칩 UI (아이콘, 파일명, 크기, 삭제 버튼), 메시지 내 첨부 표시</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 9c. File Upload System -->
+      <div class="page-break"></div>
+      <h2 id="s9c"><span class="section-num">09c</span>File Upload System</h2>
+
+      <div class="callout callout-info">
+        <strong>Attachment Context Injection</strong> &mdash; 사용자가 첨부한 파일을 에이전트의 입력 컨텍스트에 자동 주입하여,
+        파일 기반 업무(데이터 분석, 문서 요약, 번역 등)를 원활하게 처리합니다.
+      </div>
+
+      <h3>9c.1 Upload Pipeline</h3>
+      <pre><code>┌──────────────┐     ┌─────────────────┐     ┌──────────────────┐
+│  Frontend    │     │  FastAPI Server  │     │  Agentic Loop    │
+│              │     │                  │     │                  │
+│  Drag & Drop ├────►│ POST /api/v1/    ├────►│ _build_attachment│
+│  or 📎 Click │     │   upload         │     │   _context()     │
+│              │     │                  │     │                  │
+│  FormData    │     │ Validate:        │     │ Text files:      │
+│  multipart   │     │  - extension     │     │  → read content  │
+│              │     │  - size ≤ 10MB   │     │  → inject inline │
+│  ┌────────┐  │     │                  │     │                  │
+│  │ Preview │  │     │ Save to:         │     │ Binary files:    │
+│  │ Chips   │  │     │ uploads/{session}/│    │  → path reference│
+│  └────────┘  │     │ {uuid}_{name}    │     │                  │
+└──────────────┘     └─────────────────┘     └──────────────────┘</code></pre>
+
+      <h3>9c.2 API Endpoints</h3>
+      <pre><code><span class="code-comment"># File Upload API</span>
+
+POST   /api/v1/upload              <span class="code-comment"># Upload file (multipart/form-data)</span>
+GET    /api/v1/upload/:file_id     <span class="code-comment"># Get upload metadata</span></code></pre>
+
+      <h3>9c.3 Configuration</h3>
+      <table>
+        <thead>
+          <tr><th>Parameter</th><th>Value</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>MAX_UPLOAD_SIZE</code></td><td>10 MB</td><td>단일 파일 최대 크기</td></tr>
+          <tr><td><code>ALLOWED_EXTENSIONS</code></td><td>.txt, .csv, .json, .md, .xlsx, .pdf, .yaml, .yml, .py, .html, .xml, .tsv, .log, .conf, .ini, .toml</td><td>허용 확장자 목록</td></tr>
+          <tr><td><code>UPLOAD_DIR</code></td><td><code>uploads/{session_id}/</code></td><td>세션별 업로드 디렉토리</td></tr>
+          <tr><td>Text Preview</td><td>2,000 chars</td><td>텍스트 파일 미리보기 길이</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9c.4 Context Injection</h3>
+      <table>
+        <thead>
+          <tr><th>File Type</th><th>Extensions</th><th>Injection Method</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Text</strong></td><td>.txt, .csv, .json, .md, .yaml, .py, .html, .xml, .tsv, .log</td><td>파일 내용을 사용자 메시지에 인라인 삽입: <code>[Attached file: name]\n{content}</code></td></tr>
+          <tr><td><strong>Binary</strong></td><td>.xlsx, .pdf</td><td>파일 경로 참조만 삽입: <code>[Attached file: name] (binary, path: ...)</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>9c.5 Frontend UX</h3>
+      <table>
+        <thead>
+          <tr><th>Feature</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Drag & Drop</strong></td><td>채팅 입력 영역에 파일 드래그 시 오버레이 표시, 카운터 기반 dragenter/dragleave 관리</td></tr>
+          <tr><td><strong>📎 Attach Button</strong></td><td>클립 아이콘 클릭 → hidden file input 트리거, 복수 파일 선택 지원</td></tr>
+          <tr><td><strong>Preview Chips</strong></td><td>파일별 칩 (아이콘 + 이름 + 크기 + ✕ 삭제 버튼), 전송 전 미리보기</td></tr>
+          <tr><td><strong>Async Upload</strong></td><td>메시지 전송 시 대기 파일 순차 업로드 → file_id 수집 → WebSocket 메시지에 포함</td></tr>
+          <tr><td><strong>Message Display</strong></td><td>전송된 메시지 버블에 첨부 파일 목록 렌더링</td></tr>
+        </tbody>
+      </table>
+
+      <!-- 9d. Monitoring System -->
+      <div class="page-break"></div>
+      <h2 id="s9d"><span class="section-num">09d</span>Monitoring System</h2>
+
+      <div class="callout callout-info">
+        <strong>Real-time Observability</strong> &mdash; 시스템 전체의 요청, 에이전트, 스킬 실행을 실시간으로 모니터링하는
+        내장형 관측 시스템. Thread-safe 싱글턴 컬렉터 + HTTP 미들웨어 + SVG 대시보드.
+      </div>
+
+      <h3>9d.1 Architecture</h3>
+      <pre><code>┌────────────────────────────────────────────────────────────────┐
+│  Monitoring Architecture                                       │
+│                                                                │
+│  ┌──────────────────┐    ┌──────────────────────────────────┐  │
+│  │ MetricsMiddleware │    │ MetricsCollector (Singleton)     │  │
+│  │ (Starlette)      │───►│                                  │  │
+│  │ Auto-record:     │    │ Counters:                        │  │
+│  │  - latency_ms    │    │  - total_requests, success, error│  │
+│  │  - success/error │    │  - total_tokens, total_latency   │  │
+│  │  - skip /monitor │    │                                  │  │
+│  └──────────────────┘    │ Per-Agent:                       │  │
+│                          │  - count, total_time_ms          │  │
+│  ┌──────────────────┐    │                                  │  │
+│  │ AgenticLoop      │───►│ Per-Skill:                       │  │
+│  │ record_request() │    │  - count, total_tokens, time     │  │
+│  │ record_agent()   │    │                                  │  │
+│  │ record_skill()   │    │ Time-Series:                     │  │
+│  │ record_quality() │    │  - 1-min buckets (last 60)       │  │
+│  │ record_error()   │    │                                  │  │
+│  └──────────────────┘    │ Error Log:                       │  │
+│                          │  - last 100 entries              │  │
+│  ┌──────────────────┐    │                                  │  │
+│  │ Dashboard UI     │◄───│ Quality Histogram:               │  │
+│  │ (dashboard.html) │    │  - 10 buckets (0-100%)           │  │
+│  │ 30s auto-refresh │    └──────────────────────────────────┘  │
+│  └──────────────────┘                                          │
+└────────────────────────────────────────────────────────────────┘</code></pre>
+
+      <h3>9d.2 Monitoring API Endpoints</h3>
+      <pre><code><span class="code-comment"># Monitoring REST API</span>
+
+GET  /api/v1/monitoring/metrics    <span class="code-comment"># 전체 시스템 메트릭 (requests, latency, tokens)</span>
+GET  /api/v1/monitoring/health     <span class="code-comment"># 상세 헬스 체크 (LLM, skills, sessions, uptime)</span>
+GET  /api/v1/monitoring/timeline   <span class="code-comment"># 시계열 데이터 (1분 단위, 최대 60분)</span>
+GET  /api/v1/monitoring/agents     <span class="code-comment"># 에이전트별 실행 통계 (count, avg_time)</span>
+GET  /api/v1/monitoring/skills     <span class="code-comment"># 스킬별 사용 통계 (count, tokens, time)</span>
+GET  /api/v1/monitoring/errors     <span class="code-comment"># 최근 오류 로그 (최대 100건)</span>
+GET  /api/v1/monitoring/quality    <span class="code-comment"># 품질 점수 분포 히스토그램</span></code></pre>
+
+      <h3>9d.3 MetricsCollector</h3>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Parameters</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>record_request()</code></td><td>latency_ms, success, tokens, iterations</td><td>완료된 요청 기록, 시계열 버킷 업데이트</td></tr>
+          <tr><td><code>record_agent_execution()</code></td><td>agent, latency_ms</td><td>에이전트별 실행 횟수 및 시간 누적</td></tr>
+          <tr><td><code>record_skill_usage()</code></td><td>skill_id, tokens, latency_ms</td><td>스킬별 사용 횟수, 토큰, 시간 누적</td></tr>
+          <tr><td><code>record_quality_score()</code></td><td>score (0.0~1.0)</td><td>품질 점수 히스토그램 버킷에 기록</td></tr>
+          <tr><td><code>record_error()</code></td><td>code, message, session_id, skill_id</td><td>오류 로그 추가 (최대 100건 유지)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9d.4 Dashboard UI</h3>
+      <table>
+        <thead>
+          <tr><th>Component</th><th>File</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>dashboard.html</code></td><td>Layout</td><td>5 KPI 카드 + 6 차트 패널, Navigation Bar</td></tr>
+          <tr><td><code>dashboard.css</code></td><td>Styles</td><td>워크스페이스와 동일한 다크 테마 디자인 토큰, 반응형 그리드</td></tr>
+          <tr><td><code>dashboard.js</code></td><td>Logic</td><td>7개 API 병렬 fetch, SVG 차트 렌더링, 30초 자동 새로고침</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9d.5 KPI Cards</h3>
+      <table>
+        <thead>
+          <tr><th>KPI</th><th>Data Source</th><th>Format</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Total Requests</td><td><code>/metrics → requests.total</code></td><td>숫자 (K/M 단위 포맷)</td></tr>
+          <tr><td>Success Rate</td><td><code>/metrics → requests.success_rate</code></td><td>퍼센트 (%)</td></tr>
+          <tr><td>Avg Latency</td><td><code>/metrics → latency.avg_ms</code></td><td>밀리초 (ms)</td></tr>
+          <tr><td>Active Sessions</td><td><code>/health → active_sessions</code></td><td>숫자</td></tr>
+          <tr><td>Total Tokens</td><td><code>/metrics → tokens.total</code></td><td>숫자 (K/M 단위 포맷)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>9d.6 Chart Panels</h3>
+      <table>
+        <thead>
+          <tr><th>Chart</th><th>Type</th><th>Data Source</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Request Timeline</td><td>SVG Bar Chart</td><td><code>/timeline</code></td><td>1분 단위 요청 수 + 오류 오버레이, 시간축 레이블</td></tr>
+          <tr><td>Agent Performance</td><td>Horizontal Bar</td><td><code>/agents</code></td><td>에이전트별 실행 횟수 + 평균 응답시간, 컬러 코딩</td></tr>
+          <tr><td>Skill Usage</td><td>Horizontal Bar</td><td><code>/skills</code></td><td>상위 10개 스킬 사용 횟수 비교</td></tr>
+          <tr><td>System Health</td><td>Status Panel</td><td><code>/health</code></td><td>시스템/LLM/스킬/세션/업타임/오류율 상태 표시</td></tr>
+          <tr><td>Recent Errors</td><td>Scrollable List</td><td><code>/errors</code></td><td>최근 오류 목록 (시간, 코드, 메시지)</td></tr>
+          <tr><td>Quality Distribution</td><td>Histogram</td><td><code>/quality</code></td><td>품질 점수 10단계 분포 (Red→Green 색상)</td></tr>
+        </tbody>
+      </table>
 
       <!-- 10. Skills Catalog -->
       <h2 id="s10"><span class="section-num">10</span>Built-in Skills Catalog</h2>
 
-      <h3>10.1 Category Overview</h3>
+      <h3>10.1 Category Overview (16 Skills / 10 Categories)</h3>
       <table>
         <thead>
-          <tr><th>Category</th><th>Skills Count</th><th>Representative Skills</th></tr>
+          <tr><th>Category</th><th>Count</th><th>Format</th><th>Skills</th></tr>
         </thead>
         <tbody>
-          <tr><td>Document</td><td>4</td><td>doc-drafter, meeting-minutes, contract-reviewer, sop-generator</td></tr>
-          <tr><td>Email</td><td>2</td><td>email-composer, email-summarizer</td></tr>
-          <tr><td>Data Analysis</td><td>1</td><td>excel-analyzer</td></tr>
-          <tr><td>Schedule</td><td>1</td><td>schedule-optimizer</td></tr>
-          <tr><td>Presentation</td><td>2</td><td>slide-outliner, talking-points</td></tr>
-          <tr><td>HR</td><td>1</td><td>jd-writer</td></tr>
-          <tr><td>Translation</td><td>2</td><td>biz-translator, proofreader</td></tr>
-          <tr><td>Automation</td><td>1</td><td>report-scheduler</td></tr>
+          <tr><td>Document</td><td>4</td><td>YAML + SKILL.md</td><td>doc-drafter ★, meeting-minutes, contract-reviewer, sop-generator</td></tr>
+          <tr><td>Email</td><td>2</td><td>YAML + SKILL.md</td><td>email-composer ★, email-summarizer</td></tr>
+          <tr><td>Data Analysis</td><td>2</td><td>YAML + SKILL.md</td><td>excel-analyzer, data-analyzer ★</td></tr>
+          <tr><td>Schedule</td><td>1</td><td>YAML</td><td>schedule-optimizer</td></tr>
+          <tr><td>Presentation</td><td>2</td><td>YAML</td><td>slide-outliner, talking-points</td></tr>
+          <tr><td>HR</td><td>1</td><td>YAML</td><td>jd-writer</td></tr>
+          <tr><td>Translation</td><td>2</td><td>YAML</td><td>biz-translator, proofreader</td></tr>
+          <tr><td>Knowledge</td><td>1</td><td>YAML</td><td>deep-researcher</td></tr>
+          <tr><td>Automation</td><td>1</td><td>YAML</td><td>report-scheduler</td></tr>
         </tbody>
       </table>
+
+      <div class="callout">
+        <strong>★ = SKILL.md format</strong> &mdash; Anthropic Agent Skills 형식으로 제공되는 스킬.
+        <code>scripts/</code>, <code>references/</code> 디렉토리를 포함하며 Progressive Disclosure 방식으로 로딩됩니다.
+      </div>
 
       <h3>10.2 Skill Detail: Top 5</h3>
       <table>
@@ -1116,7 +1494,7 @@ POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</sp
               &bull; Skill Engine (Registry, Loader, Sandbox)<br>
               &bull; 5개 기본 스킬
             </td>
-            <td><span class="tag tag-orange">In Progress</span></td>
+            <td><span class="tag tag-green">Complete</span></td>
           </tr>
           <tr>
             <td><strong>Phase 2: Platform</strong></td>
@@ -1124,11 +1502,25 @@ POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</sp
             <td>
               &bull; Research + Creative Agent 추가<br>
               &bull; Episodic + Semantic Memory<br>
-              &bull; Skill Store (Browse, Install, Search)<br>
-              &bull; Skill Editor + Validator<br>
-              &bull; 15+ 기본 스킬
+              &bull; Skill Store (Browse, Install, Search) + Workspace UI<br>
+              &bull; Skill Editor + Validator + SKILL.md 지원<br>
+              &bull; 16개 기본 스킬 (YAML 13 + SKILL.md 3)<br>
+              &bull; WebSocket 실시간 이벤트 스트리밍<br>
+              &bull; 221개 테스트 통과
             </td>
-            <td><span class="tag tag-blue">Planned</span></td>
+            <td><span class="tag tag-green">Complete</span></td>
+          </tr>
+          <tr>
+            <td><strong>Phase 2.5: Ops</strong></td>
+            <td>Month 4</td>
+            <td>
+              &bull; File Upload 시스템 (Drag & Drop + 첨부 컨텍스트 주입)<br>
+              &bull; Monitoring 시스템 (MetricsCollector + MetricsMiddleware)<br>
+              &bull; 실시간 Monitoring Dashboard (KPI, 차트, 헬스, 오류 로그)<br>
+              &bull; 7개 Monitoring API 엔드포인트<br>
+              &bull; API 버그 수정 (v2.0 → v3.0)
+            </td>
+            <td><span class="tag tag-green">Complete</span></td>
           </tr>
           <tr>
             <td><strong>Phase 3: Community</strong></td>
@@ -1136,7 +1528,6 @@ POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</sp
             <td>
               &bull; Fork & Share 기능<br>
               &bull; Rating & Review 시스템<br>
-              &bull; Analytics Dashboard<br>
               &bull; API 공개<br>
               &bull; 커뮤니티 100+ 스킬 목표
             </td>
@@ -1159,6 +1550,27 @@ POST   /api/v1/skills/:id/fork       <span class="code-comment"># Fork skill</sp
 
       <!-- 13. Revision History -->
       <h2 id="s13"><span class="section-num">13</span>Revision History</h2>
+
+      <div class="version-entry">
+        <span class="version-tag">v3.0.0</span>
+        <div class="version-info">
+          <strong>Ops & Monitoring Release</strong> &mdash; 2026-02-28<br>
+          File Upload 시스템 (Drag & Drop, 첨부 컨텍스트 주입, 10MB 제한),
+          실시간 Monitoring 시스템 (MetricsCollector 싱글턴, MetricsMiddleware, 7개 API),
+          Monitoring Dashboard (5 KPI 카드, SVG 차트 6종, 30초 자동 새로고침),
+          API 버그 수정 (세션/에러 핸들링). Phase 1-2.5 완료.
+        </div>
+      </div>
+
+      <div class="version-entry">
+        <span class="version-tag">v2.0.0</span>
+        <div class="version-info">
+          <strong>Workspace Release</strong> &mdash; 2026-02-26<br>
+          Anthropic Agent Skills (SKILL.md) 듀얼 포맷 지원, AI Workspace UI (2-pane Chat + Agent Activity),
+          WebSocket 실시간 이벤트 스트리밍, Progressive Disclosure, Description-based 스킬 활성화,
+          16개 스킬 (YAML 13 + SKILL.md 3), 221개 테스트. Phase 1-2 완료.
+        </div>
+      </div>
 
       <div class="version-entry">
         <span class="version-tag">v1.0.0</span>

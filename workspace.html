@@ -30,6 +30,7 @@
         <div class="nav-center">
             <a href="workspace.html" class="nav-link active">Workspace</a>
             <a href="index.html" class="nav-link">Store</a>
+            <a href="dashboard.html" class="nav-link">Dashboard</a>
         </div>
         <div class="nav-right">
             <div class="connection-status" id="connectionStatus">
@@ -103,8 +104,27 @@
             </div>
 
             <!-- Chat Input -->
-            <div class="chat-input-area">
+            <div class="chat-input-area" id="chatInputArea">
+                <!-- File attachment preview -->
+                <div class="attachment-preview" id="attachmentPreview" style="display: none;"></div>
+
+                <!-- Drag overlay -->
+                <div class="drag-overlay" id="dragOverlay" style="display: none;">
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                        <polyline points="17 8 12 3 7 8"></polyline>
+                        <line x1="12" y1="3" x2="12" y2="15"></line>
+                    </svg>
+                    <span>파일을 여기에 놓으세요</span>
+                </div>
+
                 <div class="input-wrapper">
+                    <button class="attach-btn" id="attachBtn" onclick="triggerFileSelect()" title="파일 첨부 (최대 10MB)">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path>
+                        </svg>
+                    </button>
+                    <input type="file" id="fileInput" multiple style="display:none" onchange="handleFileSelect(event)" accept=".txt,.csv,.json,.md,.xlsx,.pdf,.yaml,.yml,.py,.html,.xml,.tsv,.log">
                     <textarea
                         id="chatInput"
                         class="chat-input"
@@ -122,7 +142,7 @@
                 </div>
                 <div class="input-footer">
                     <span class="char-count" id="charCount">0</span>
-                    <span class="input-hint">Enter 전송 / Shift+Enter 줄바꿈</span>
+                    <span class="input-hint">Enter 전송 / Shift+Enter 줄바꿈 / 파일 드래그&드롭</span>
                 </div>
             </div>
         </main>

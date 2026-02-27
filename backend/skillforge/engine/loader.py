@@ -15,7 +15,9 @@ from skillforge.models import (
     SkillDefinition,
     SkillField,
     SkillSettings,
+    SourceType,
 )
+from skillforge.engine.skill_md_parser import SkillMdParser
 
 logger = logging.getLogger(__name__)
 
@@ -56,6 +58,94 @@ class SkillLoader:
             except Exception as exc:
                 logger.warning("Failed to load skill from %s: %s", path.name, exc)
         return skills
+
+    # ── SKILL.md Loaders ──
+
+    @staticmethod
+    def from_skill_md(path: str | Path) -> SkillDefinition:
+        """Load a SkillDefinition from a SKILL.md file."""
+        data = SkillMdParser.parse_file(path)
+        fm = data.frontmatter
+
+        version = fm.metadata.get("version", "1.0.0")
+        author = fm.metadata.get("author", "unknown")
+
+        return SkillDefinition(
+            id=fm.name,
+            name=fm.name,
+            version=version,
+            author=author,
+            category=SkillCategory.OTHER,
+            description=fm.description,
+            instructions=data.instructions,
+            prompt_template=data.instructions,
+            source_type=SourceType.SKILLMD,
+            skill_dir=str(Path(path).parent),
+            license_text=fm.license,
+            compatibility=fm.compatibility,
+            allowed_tools=fm.allowed_tools,
+            skill_metadata=fm.metadata,
+        )
+
+    @staticmethod
+    def from_skill_directory(dir_path: str | Path) -> SkillDefinition:
+        """Load a skill from a directory containing SKILL.md."""
+        dir_path = Path(dir_path)
+        skill_md_path = dir_path / "SKILL.md"
+
+        if not skill_md_path.exists():
+            raise FileNotFoundError(f"No SKILL.md found in {dir_path}")
+
+        skill = SkillLoader.from_skill_md(skill_md_path)
+
+        # Scan for scripts
+        scripts_dir = dir_path / "scripts"
+        if scripts_dir.is_dir():
+            skill.scripts = [
+                str(p.relative_to(dir_path))
+                for p in sorted(scripts_dir.iterdir())
+                if p.is_file()
+            ]
+
+        # Scan for references
+        refs_dir = dir_path / "references"
+        if refs_dir.is_dir():
+            skill.references = [
+                str(p.relative_to(dir_path))
+                for p in sorted(refs_dir.iterdir())
+                if p.is_file()
+            ]
+
+        return skill
+
+    @staticmethod
+    def load_skills_directory(base_dir: str | Path) -> list[SkillDefinition]:
+        """Scan a base directory for skill folders (each containing SKILL.md)."""
+        base_dir = Path(base_dir)
+        skills = []
+
+        if not base_dir.exists():
+            logger.warning("Skills directory not found: %s", base_dir)
+            return skills
+
+        for entry in sorted(base_dir.iterdir()):
+            if entry.is_dir() and (entry / "SKILL.md").exists():
+                try:
+                    skill = SkillLoader.from_skill_directory(entry)
+                    skills.append(skill)
+                    logger.info(
+                        "Loaded SKILL.md skill: %s from %s",
+                        skill.id, entry.name,
+                    )
+                except Exception as exc:
+                    logger.warning(
+                        "Failed to load skill from %s: %s",
+                        entry.name, exc,
+                    )
+
+        return skills
+
+    # ── YAML Export ──
 
     @staticmethod
     def to_yaml(skill: SkillDefinition) -> str:

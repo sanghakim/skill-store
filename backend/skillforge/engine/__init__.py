@@ -10,5 +10,6 @@ from skillforge.engine.registry import SkillRegistry
 from skillforge.engine.loader import SkillLoader
 from skillforge.engine.sandbox import SkillSandbox
 from skillforge.engine.validator import SkillValidator
+from skillforge.engine.skill_md_parser import SkillMdParser
 
-__all__ = ["SkillRegistry", "SkillLoader", "SkillSandbox", "SkillValidator"]
+__all__ = ["SkillRegistry", "SkillLoader", "SkillSandbox", "SkillValidator", "SkillMdParser"]

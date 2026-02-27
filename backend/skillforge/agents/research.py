@@ -115,6 +115,23 @@ class ResearchAgent(BaseAgent):
 
         results["context_enrichment"] = "\n\n".join(enrichment_parts)
 
+        # ── Build 'outputs' dict so Reviewer/Merger can see our content ──
+        outputs: dict[str, Any] = {}
+        deep = results["research_data"].get("deep_research", {})
+        if deep.get("report"):
+            outputs["report"] = deep["report"]
+            if deep.get("sources"):
+                outputs["sources"] = "\n".join(
+                    f"- {s.get('title', '')} ({s.get('url', '')})"
+                    for s in deep["sources"]
+                )
+        skill_out = results["research_data"].get("skill_output")
+        if skill_out:
+            outputs["skill_result"] = str(skill_out) if not isinstance(skill_out, str) else skill_out
+        if not outputs and results["context_enrichment"]:
+            outputs["context"] = results["context_enrichment"]
+        results["outputs"] = outputs
+
         # Log
         self.memory.add_message(
             session_id,
